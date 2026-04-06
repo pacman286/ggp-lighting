@@ -321,25 +321,13 @@
 
     /* ── Location dot ───────────────────────────────────────────────────────── */
     .location-dot {
-      width: 20px; height: 20px;
-      position: relative;
-    }
-    .location-dot::before,
-    .location-dot::after {
-      content: '';
-      position: absolute;
-      background: #2563eb;
-      border-radius: 2px;
-    }
-    /* Horizontal bar */
-    .location-dot::before {
-      width: 20px; height: 4px;
-      top: 8px; left: 0;
-    }
-    /* Vertical bar */
-    .location-dot::after {
-      width: 4px; height: 20px;
-      top: 0; left: 8px;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: #06b6d4;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #fff;
+      line-height: 1;
     }
     .location-dot-pulse {
       width: 40px; height: 40px; border-radius: 50%;
@@ -1120,9 +1108,9 @@ function initLocation() {
       });
       const dotIcon = L.divIcon({
         className: '',
-        iconSize:  [20, 20],
-        iconAnchor:[10, 10],
-        html: '<div class="location-dot"></div>'
+        iconSize:  [24, 24],
+        iconAnchor:[12, 12],
+        html: '<div class="location-dot">✕</div>'
       });
 
       if (!locationPulse) {
