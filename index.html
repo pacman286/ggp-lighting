@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>GGP Lighting Assessment</title>
+
+  <!-- PWA manifest (manifest.json created separately) -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a472a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    /* ── Reset & Base ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --clr-primary:   #1a472a;
+      --clr-primary-l: #2d6a4f;
+      --clr-accent:    #52b788;
+      --clr-bg:        #f8fafc;
+      --clr-surface:   #ffffff;
+      --clr-border:    #e2e8f0;
+      --clr-text:      #1e293b;
+      --clr-muted:     #64748b;
+      --clr-c0:        #94a3b8;
+      --clr-c1:        #22c55e;
+      --clr-c2:        #84cc16;
+      --clr-c3:        #f97316;
+      --clr-c4:        #ef4444;
+      --clr-c5:        #991b1b;
+      --header-h:      52px;
+      --panel-radius:  16px;
+      --shadow:        0 -4px 24px rgba(0,0,0,0.18);
+    }
+    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+
+    /* ── Header ────────────────────────────────────────────────────────────── */
+    #app-header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      height: var(--header-h);
+      background: var(--clr-primary);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    #app-header h1 {
+      color: #fff; font-size: 1.05rem; font-weight: 600; letter-spacing: 0.02em;
+    }
+    #app-header h1 span { color: var(--clr-accent); }
+    .header-btns { display: flex; gap: 8px; }
+    .header-btn {
+      background: rgba(255,255,255,0.15); border: none; border-radius: 8px;
+      color: #fff; padding: 6px 12px; font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .header-btn:hover { background: rgba(255,255,255,0.25); }
+    .header-btn.icon { padding: 6px 10px; font-size: 1rem; }
+
+    /* ── Map ───────────────────────────────────────────────────────────────── */
+    #map {
+      position: fixed;
+      top: var(--header-h); left: 0; right: 0; bottom: 0;
+      z-index: 1;
+    }
+
+    /* ── Marker Styles ─────────────────────────────────────────────────────── */
+    .pole-marker {
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.85);
+      font-size: 9px; font-weight: 700; color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      white-space: nowrap;
+    }
+    .pole-marker.selected {
+      border-color: #fff;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.7), 0 2px 8px rgba(0,0,0,0.5);
+      transform: scale(1.2);
+      z-index: 999 !important;
+    }
+
+    /* ── Legend ────────────────────────────────────────────────────────────── */
+    #legend {
+      position: fixed; bottom: 16px; left: 12px; z-index: 500;
+      background: rgba(255,255,255,0.95); border-radius: 10px;
+      padding: 8px 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      font-size: 0.7rem;
+    }
+    #legend h4 { font-size: 0.7rem; color: var(--clr-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .legend-row { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; color: var(--clr-text); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15); }
+
+    /* ── Stats bar ─────────────────────────────────────────────────────────── */
+    #stats-bar {
+      position: fixed; top: calc(var(--header-h) + 8px); right: 8px; z-index: 500;
+      background: rgba(255,255,255,0.95); border-radius: 10px;
+      padding: 6px 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      font-size: 0.72rem; color: var(--clr-text);
+    }
+    #stats-bar span { font-weight: 700; color: var(--clr-primary); }
+
+    /* ── Detail Panel (bottom sheet) ───────────────────────────────────────── */
+    #panel {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+      background: var(--clr-surface);
+      border-radius: var(--panel-radius) var(--panel-radius) 0 0;
+      box-shadow: var(--shadow);
+      max-height: 85vh;
+      display: flex; flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    #panel.open { transform: translateY(0); }
+
+    .panel-handle-bar {
+      width: 36px; height: 4px; background: #cbd5e1;
+      border-radius: 2px; margin: 10px auto 4px;
+      flex-shrink: 0;
+    }
+
+    .panel-header {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 4px 14px 10px;
+      border-bottom: 1px solid var(--clr-border);
+      flex-shrink: 0;
+    }
+    .panel-title { flex: 1; }
+    .panel-device-num {
+      font-size: 1.1rem; font-weight: 700; color: var(--clr-primary); display: block;
+    }
+    .panel-location { font-size: 0.78rem; color: var(--clr-muted); display: block; margin-top: 1px; }
+    .panel-tag { font-size: 0.72rem; color: #94a3b8; display: block; }
+
+    .panel-header-btns { display: flex; gap: 6px; padding-top: 2px; }
+    .panel-icon-btn {
+      background: var(--clr-bg); border: 1px solid var(--clr-border);
+      border-radius: 8px; padding: 5px 9px; cursor: pointer;
+      font-size: 0.95rem; color: var(--clr-muted); transition: all 0.15s;
+    }
+    .panel-icon-btn:hover { background: var(--clr-border); color: var(--clr-text); }
+    .panel-icon-btn.close { color: #ef4444; }
+
+    .panel-body {
+      overflow-y: auto; flex: 1;
+      padding: 12px 14px 24px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Fixture selector */
+    #fixture-tabs {
+      display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .fx-tab {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 7px 4px; border-radius: 10px;
+      border: 2px solid var(--clr-border);
+      background: var(--clr-bg); cursor: pointer;
+      transition: all 0.15s; font-size: 0.7rem; color: var(--clr-muted);
+      font-weight: 600;
+    }
+    .fx-tab .fx-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.12);
+    }
+    .fx-tab .fx-zone-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; }
+    .fx-tab.active {
+      border-color: var(--clr-primary); background: #f0fdf4;
+      color: var(--clr-primary);
+    }
+    .fx-tab.active .fx-zone-label { color: var(--clr-primary); }
+
+    /* Fixture detail */
+    #fixture-info {
+      font-size: 0.78rem; color: var(--clr-muted);
+      background: var(--clr-bg); border-radius: 8px;
+      padding: 8px 10px; margin-bottom: 12px;
+      border: 1px solid var(--clr-border);
+    }
+    #fixture-info .fx-model { font-weight: 600; color: var(--clr-text); font-size: 0.82rem; }
+    #fixture-info .fx-mfr  { margin-top: 1px; }
+
+    /* Form elements */
+    .form-row { margin-bottom: 10px; }
+    .form-label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      color: var(--clr-muted); margin-bottom: 4px; text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Condition selector — 6 pill buttons */
+    #condition-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+    .cond-btn {
+      flex: 1; min-width: 0;
+      padding: 7px 2px; border-radius: 8px;
+      border: 2px solid transparent; cursor: pointer;
+      font-size: 0.68rem; font-weight: 700; color: #fff;
+      text-align: center; line-height: 1.2;
+      transition: all 0.15s; opacity: 0.65;
+    }
+    .cond-btn.selected { opacity: 1; border-color: rgba(0,0,0,0.25); transform: scale(1.04); }
+    .cond-btn small { display: block; font-size: 0.6rem; font-weight: 400; opacity: 0.9; }
+
+    /* Notes + Inspector */
+    #notes-input, #inspector-input {
+      width: 100%; padding: 8px 10px;
+      border: 1px solid var(--clr-border); border-radius: 8px;
+      font-size: 0.9rem; font-family: inherit;
+      background: var(--clr-bg); color: var(--clr-text);
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+    #notes-input:focus, #inspector-input:focus {
+      outline: none; border-color: var(--clr-primary);
+    }
+    #notes-input { resize: vertical; min-height: 64px; }
+
+    /* Save button */
+    #btn-save {
+      width: 100%; padding: 13px; margin-top: 4px;
+      background: var(--clr-primary); color: #fff;
+      border: none; border-radius: 10px; font-size: 0.95rem;
+      font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    #btn-save:hover { background: var(--clr-primary-l); }
+    #btn-save:active { transform: scale(0.98); }
+
+    /* Last assessed label */
+    #last-assessed {
+      font-size: 0.7rem; color: var(--clr-muted);
+      text-align: center; margin-top: 8px;
+    }
+
+    /* ── Info Modal ─────────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.5);
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-sheet {
+      background: var(--clr-surface); width: 100%; max-width: 520px;
+      border-radius: var(--panel-radius) var(--panel-radius) 0 0;
+      max-height: 80vh; display: flex; flex-direction: column;
+      transform: translateY(30px); transition: transform 0.25s;
+    }
+    .modal-overlay.open .modal-sheet { transform: translateY(0); }
+    .modal-top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--clr-border);
+      flex-shrink: 0;
+    }
+    .modal-top h2 { font-size: 1rem; color: var(--clr-primary); }
+    .modal-close-btn {
+      background: none; border: none; font-size: 1.2rem;
+      color: var(--clr-muted); cursor: pointer; padding: 4px 8px;
+    }
+    .modal-body { overflow-y: auto; padding: 14px 16px 28px; }
+
+    .info-section { margin-bottom: 18px; }
+    .info-section h3 {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--clr-muted); margin-bottom: 8px;
+    }
+    .info-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .info-table td { padding: 5px 8px; border-bottom: 1px solid var(--clr-border); }
+    .info-table td:first-child { color: var(--clr-muted); width: 45%; font-weight: 500; }
+    .info-table td:last-child { color: var(--clr-text); font-weight: 600; }
+    .info-table td.missing { color: #ef4444 !important; font-style: italic; }
+
+    /* ── Settings Modal ─────────────────────────────────────────────────────── */
+    #settings-modal .modal-body { display: flex; flex-direction: column; gap: 14px; }
+    .settings-group label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      color: var(--clr-muted); margin-bottom: 4px; text-transform: uppercase;
+    }
+    .settings-group input[type="text"] {
+      width: 100%; padding: 8px 10px;
+      border: 1px solid var(--clr-border); border-radius: 8px;
+      font-size: 0.9rem; font-family: inherit; background: var(--clr-bg);
+    }
+    .settings-group input[type="text"]:focus { outline: none; border-color: var(--clr-primary); }
+
+    /* Visibility checkboxes */
+    #visibility-checkboxes { display: flex; flex-direction: column; gap: 2px; }
+    .visibility-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 8px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--clr-border); background: var(--clr-bg);
+      font-size: 0.82rem;
+    }
+    .visibility-row:hover { background: #f0fdf4; }
+    .visibility-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--clr-primary); flex-shrink: 0; }
+    .vis-type  { font-weight: 700; color: var(--clr-primary); min-width: 36px; }
+    .vis-desc  { flex: 1; color: var(--clr-muted); }
+    .vis-count { font-weight: 600; color: var(--clr-text); font-size: 0.75rem;
+                 background: var(--clr-border); border-radius: 10px; padding: 1px 7px; }
+
+    /* Version display */
+    .settings-version {
+      text-align: center; font-size: 0.72rem; color: #94a3b8; padding-top: 4px;
+    }
+
+    .danger-btn {
+      width: 100%; padding: 10px;
+      background: none; border: 2px solid #ef4444;
+      border-radius: 8px; color: #ef4444; font-weight: 600; cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .danger-btn:hover { background: #fef2f2; }
+
+    /* ── Location dot ───────────────────────────────────────────────────────── */
+    .location-dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #2563eb;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.4), 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .location-dot-pulse {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(37,99,235,0.15);
+      border: none;
+      animation: location-pulse 2s ease-out infinite;
+    }
+    @keyframes location-pulse {
+      0%   { transform: scale(0.4); opacity: 1; }
+      100% { transform: scale(1);   opacity: 0; }
+    }
+    /* Active state for Find Me button */
+    #btn-locate.active { background: rgba(37,99,235,0.5); }
+
+    /* ── Toast ──────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 2000; background: #1e293b; color: #fff;
+      padding: 10px 20px; border-radius: 100px;
+      font-size: 0.85rem; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      white-space: nowrap;
+    }
+    #toast.show {
+      opacity: 1; pointer-events: all;
+      transform: translateX(-50%) translateY(-4px);
+    }
+    #toast.success { background: var(--clr-primary); }
+    #toast.error   { background: #b91c1c; }
+
+    /* ── Responsive: wider screens ──────────────────────────────────────────── */
+    @media (min-width: 600px) {
+      #panel {
+        left: auto; right: 12px; bottom: 12px;
+        width: 340px; max-height: calc(100vh - var(--header-h) - 24px);
+        border-radius: var(--panel-radius);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        transform: translateX(calc(100% + 20px));
+        transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      #panel.open { transform: translateX(0); }
+      .panel-handle-bar { display: none; }
+      .modal-overlay { align-items: center; }
+      .modal-sheet { border-radius: var(--panel-radius); max-width: 420px; margin: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header id="app-header">
+  <h1>GGP <span>Lighting</span> Assessment</h1>
+  <div class="header-btns">
+    <button class="header-btn icon" id="btn-locate" title="Find my location">⊕</button>
+    <button class="header-btn" id="btn-export" title="Export assessment log to CSV">Export CSV</button>
+    <button class="header-btn icon" id="btn-settings" title="Settings">⚙</button>
+  </div>
+</header>
+
+<!-- ── Map ─────────────────────────────────────────────────────────────────── -->
+<div id="map"></div>
+
+<!-- ── Stats Bar ───────────────────────────────────────────────────────────── -->
+<div id="stats-bar">
+  <span id="stat-assessed">0</span> / <span id="stat-total">0</span> items assessed
+</div>
+
+<!-- ── Legend ──────────────────────────────────────────────────────────────── -->
+<div id="legend">
+  <h4>Item Status</h4>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c0)"></div> Not Assessed</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c1)"></div> 100% Functional</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c2)"></div> &gt;50% Functional</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c3)"></div> &lt;50% Functional</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c4)"></div> Flickering</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c5)"></div> Non-Functional</div>
+</div>
+
+<!-- ── Detail Panel ─────────────────────────────────────────────────────────── -->
+<div id="panel">
+  <div class="panel-handle-bar"></div>
+
+  <div class="panel-header">
+    <div class="panel-title">
+      <span class="panel-device-num" id="panel-device-num">—</span>
+      <span class="panel-location"  id="panel-location">—</span>
+      <span class="panel-tag"       id="panel-tag">—</span>
+    </div>
+    <div class="panel-header-btns">
+      <button class="panel-icon-btn" id="btn-info"  title="Electrical & fixture details">ⓘ</button>
+      <button class="panel-icon-btn close" id="btn-close" title="Close">✕</button>
+    </div>
+  </div>
+
+  <div class="panel-body">
+    <!-- Fixture tabs -->
+    <div id="fixture-tabs"></div>
+
+    <!-- Fixture info -->
+    <div id="fixture-info">
+      <div class="fx-model" id="fx-model">—</div>
+      <div class="fx-mfr"   id="fx-mfr">—</div>
+    </div>
+
+    <!-- Condition picker -->
+    <div class="form-row">
+      <span class="form-label">Condition</span>
+      <div id="condition-picker"></div>
+    </div>
+
+    <!-- Notes -->
+    <div class="form-row">
+      <label class="form-label" for="notes-input">Notes</label>
+      <textarea id="notes-input" rows="2" placeholder="Optional notes…"></textarea>
+    </div>
+
+    <!-- Inspector -->
+    <div class="form-row">
+      <label class="form-label" for="inspector-input">Inspector</label>
+      <input type="text" id="inspector-input" placeholder="Your name…" />
+    </div>
+
+    <!-- Save -->
+    <button id="btn-save">Save Assessment</button>
+    <div id="last-assessed"></div>
+  </div>
+</div>
+
+<!-- ── Info Modal ────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="info-modal">
+  <div class="modal-sheet">
+    <div class="modal-top">
+      <h2 id="info-modal-title">Item Details</h2>
+      <button class="modal-close-btn" data-modal="info-modal">✕</button>
+    </div>
+    <div class="modal-body" id="info-modal-body"></div>
+  </div>
+</div>
+
+<!-- ── Settings Modal ────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-sheet">
+    <div class="modal-top">
+      <h2>Settings</h2>
+      <button class="modal-close-btn" data-modal="settings-modal">✕</button>
+    </div>
+    <div class="modal-body" id="settings-modal-body">
+
+      <div class="settings-group">
+        <label for="setting-inspector">Default Inspector Name</label>
+        <input type="text" id="setting-inspector" placeholder="Your name" />
+      </div>
+
+      <div class="settings-group">
+        <label>Show / Hide Item Types</label>
+        <div id="visibility-checkboxes"></div>
+      </div>
+
+      <div class="settings-group" style="margin-top:auto">
+        <label style="color:#ef4444">Danger Zone</label>
+        <button class="danger-btn" id="btn-clear-data">Clear All Assessment Data</button>
+      </div>
+
+      <div class="settings-version">Version <strong id="version-display"></strong></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ── Scripts ───────────────────────────────────────────────────────────────── -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════════════════════════════════════
+
+const APP_VERSION      = '1.2.0';
+// Paste your Apps Script web app URL here after deploying Code.gs
+const SHEETS_URL       = 'https://script.google.com/macros/s/AKfycbwj_GlvLiqkfMsm_GNzZu18DS_q4hopFY-b92h0vv1KjINyj_jYe6OvtEHa8QFr9RLWlw/exec';
+const STORAGE_STATE    = 'ggp_current_state';
+const STORAGE_LOG      = 'ggp_assessments';
+const STORAGE_INSP     = 'ggp_inspector';
+const STORAGE_VISIBILITY = 'ggp_visibility';
+const MARKER_SIZE      = 18;   // px diameter for item markers
+
+// ════════════════════════════════════════════════════════════════════════════
+// APP STATE
+// ════════════════════════════════════════════════════════════════════════════
+
+let polesData      = null;   // full poles.json payload
+let map            = null;   // Leaflet map
+let layerGroups    = {};     // type -> L.LayerGroup
+let typeVisibility = {};     // type -> boolean (true = visible)
+let leafletMarkers = {};     // deviceNum -> Leaflet marker (deviceNum is always unique)
+let currentPole    = null;   // selected lighting item object
+let currentFxPos   = 1;      // selected fixture position (1-based)
+let selectedCond   = 0;      // condition value selected in picker
+
+// Persisted data
+let currentState  = {};     // deviceNum -> { pos: {condition, notes, assessedAt, assessedBy} }
+let assessmentLog = [];     // array of all saved records (local cache)
+
+// ════════════════════════════════════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════════════════════════════════════
+
+function loadFromStorage() {
+  try {
+    const s = localStorage.getItem(STORAGE_STATE);
+    if (s) currentState = JSON.parse(s);
+    const l = localStorage.getItem(STORAGE_LOG);
+    if (l) assessmentLog = JSON.parse(l);
+    const i = localStorage.getItem(STORAGE_INSP);
+    if (i) {
+      document.getElementById('inspector-input').value = i;
+      document.getElementById('setting-inspector').value = i;
+    }
+    const v = localStorage.getItem(STORAGE_VISIBILITY);
+    if (v) typeVisibility = JSON.parse(v);
+  } catch(e) { console.warn('Storage load error:', e); }
+}
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_STATE,      JSON.stringify(currentState));
+    localStorage.setItem(STORAGE_LOG,        JSON.stringify(assessmentLog));
+    localStorage.setItem(STORAGE_INSP,       document.getElementById('inspector-input').value.trim());
+    localStorage.setItem(STORAGE_VISIBILITY, JSON.stringify(typeVisibility));
+  } catch(e) { console.warn('Storage save error:', e); }
+}
+
+function clearAllData() {
+  if (!confirm('Clear ALL assessment data? This cannot be undone.')) return;
+  currentState  = {};
+  assessmentLog = [];
+  localStorage.removeItem(STORAGE_STATE);
+  localStorage.removeItem(STORAGE_LOG);
+  refreshAllMarkers();
+  updateStats();
+  closePanel();
+  showToast('All assessment data cleared.', 'error');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CONDITION HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+function condColor(value) {
+  const colors = ['#94a3b8','#22c55e','#84cc16','#f97316','#ef4444','#991b1b'];
+  return colors[value] ?? '#94a3b8';
+}
+
+function condLabel(value) {
+  return polesData?.conditionScale?.find(c => c.value === value)?.label ?? 'Unknown';
+}
+
+// Worst condition among all assessed fixtures on an item (0 = not assessed)
+function worstCondition(deviceNum) {
+  const itemState = currentState[deviceNum];
+  if (!itemState) return 0;
+  const values = Object.values(itemState).map(f => f.condition);
+  if (!values.length) return 0;
+  return Math.max(...values);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MAP
+// ════════════════════════════════════════════════════════════════════════════
+
+function initMap() {
+  const cfg = polesData.mapConfig;
+
+  map = L.map('map', {
+    center:  cfg.center,
+    zoom:    cfg.defaultZoom,
+    minZoom: cfg.minZoom,
+    maxZoom: cfg.maxZoom,
+    zoomControl: false  // move zoom control to bottom-right manually
+  });
+
+  // Zoom control bottom-right to avoid overlapping legend
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  // Base tile layer — Esri World Imagery (free, no API key)
+  L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+      attribution: 'Imagery &copy; <a href="https://www.esri.com">Esri</a>',
+      maxZoom: 20
+    }
+  ).addTo(map);
+
+  // Optional static satellite image overlay
+  // Enable in poles.json mapConfig.imageOverlay when you have the image ready
+  if (cfg.imageOverlay?.enabled) {
+    const io = cfg.imageOverlay;
+    L.imageOverlay(io.imagePath, io.bounds, { opacity: io.opacity ?? 1 }).addTo(map);
+  }
+
+  // Close panel on map click (not on marker click)
+  map.on('click', () => {
+    if (currentPole) closePanel();
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MARKERS
+// ════════════════════════════════════════════════════════════════════════════
+
+function makeIcon(color, label) {
+  return L.divIcon({
+    className: '',
+    iconSize:  [MARKER_SIZE, MARKER_SIZE],
+    iconAnchor:[MARKER_SIZE/2, MARKER_SIZE/2],
+    html: `<div class="pole-marker" style="width:${MARKER_SIZE}px;height:${MARKER_SIZE}px;background:${color}"></div>`
+  });
+}
+
+function renderMarkers() {
+  if (!polesData) return;
+
+  // Create one LayerGroup per type, defaulting to visible
+  Object.keys(polesData.poleTypes).forEach(type => {
+    if (typeVisibility[type] === undefined) typeVisibility[type] = true;
+    layerGroups[type] = L.layerGroup();
+    if (typeVisibility[type]) layerGroups[type].addTo(map);
+  });
+
+  polesData.poles.forEach(pole => {
+    if (pole.lat == null || pole.lng == null) return;
+
+    const deviceNum = pole.deviceNum;
+    const color = condColor(worstCondition(deviceNum));
+    // Show short device label (drop type prefix: "T4." -> digits only)
+    const label = deviceNum ? deviceNum.replace(/^[A-Z0-9]+\./,'') : '';
+
+    const marker = L.marker([pole.lat, pole.lng], {
+      icon:  makeIcon(color, label),
+      title: `${deviceNum} — ${pole.locationId}`
+    });
+
+    marker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      openPanel(pole);
+    });
+
+    // Add to the appropriate type layer group
+    layerGroups[pole.type]?.addLayer(marker);
+    leafletMarkers[deviceNum] = marker;   // keyed by deviceNum — always unique
+  });
+
+  updateStats();
+}
+
+function refreshMarker(deviceNum) {
+  const marker = leafletMarkers[deviceNum];
+  if (!marker) return;
+  const pole  = polesData.poles.find(p => p.deviceNum === deviceNum);
+  if (!pole) return;
+  const color = condColor(worstCondition(deviceNum));
+  const label = deviceNum ? deviceNum.replace(/^[A-Z0-9]+\./,'') : '';
+  marker.setIcon(makeIcon(color, label));
+}
+
+function refreshAllMarkers() {
+  Object.keys(leafletMarkers).forEach(refreshMarker);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PANEL
+// ════════════════════════════════════════════════════════════════════════════
+
+function openPanel(pole) {
+  // Deselect previous marker
+  if (currentPole) {
+    const prev = leafletMarkers[currentPole.deviceNum];
+    if (prev) prev.getElement()?.querySelector('.pole-marker')?.classList.remove('selected');
+  }
+
+  currentPole   = pole;
+  currentFxPos  = 1;
+
+  // Highlight this marker
+  const marker = leafletMarkers[pole.deviceNum];
+  if (marker) marker.getElement()?.querySelector('.pole-marker')?.classList.add('selected');
+
+  // Pan map to show item
+  map.panTo([pole.lat, pole.lng], { animate: true });
+
+  // Populate header
+  document.getElementById('panel-device-num').textContent = pole.deviceNum;
+  document.getElementById('panel-location').textContent   = pole.locationId ?? '—';
+  document.getElementById('panel-tag').textContent        = `Tag: ${pole.tagId}`;
+
+  buildFixtureTabs(pole);
+  selectFixture(1);
+
+  document.getElementById('panel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('open');
+  if (currentPole) {
+    const marker = leafletMarkers[currentPole.deviceNum];
+    if (marker) marker.getElement()?.querySelector('.pole-marker')?.classList.remove('selected');
+  }
+  currentPole = null;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FIXTURE TABS
+// ════════════════════════════════════════════════════════════════════════════
+
+function buildFixtureTabs(pole) {
+  const poleType = polesData.poleTypes[pole.type];
+  if (!poleType) return;
+
+  const container = document.getElementById('fixture-tabs');
+  container.innerHTML = '';
+
+  poleType.fixtures.forEach(fx => {
+    const itemState = currentState[pole.deviceNum];
+    const fxState   = itemState?.[fx.position];
+    const cond      = fxState?.condition ?? 0;
+    const color     = condColor(cond);
+
+    const btn = document.createElement('button');
+    btn.className = 'fx-tab';
+    btn.dataset.pos = fx.position;
+    btn.innerHTML = `
+      <div class="fx-dot" style="background:${color}"></div>
+      <span class="fx-zone-label">${fx.label}</span>
+    `;
+    btn.addEventListener('click', () => selectFixture(fx.position));
+    container.appendChild(btn);
+  });
+}
+
+function selectFixture(position) {
+  if (!currentPole) return;
+  currentFxPos = position;
+
+  const poleType = polesData.poleTypes[currentPole.type];
+  const fx       = poleType?.fixtures?.find(f => f.position === position);
+  if (!fx) return;
+
+  // Update tab active state
+  document.querySelectorAll('.fx-tab').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.pos) === position);
+  });
+
+  // Fixture info
+  document.getElementById('fx-model').textContent = fx.model;
+  document.getElementById('fx-mfr').textContent   = fx.manufacturer + ' — ' + fx.description;
+
+  // Current state for this fixture
+  const fxState = currentState[currentPole.deviceNum]?.[position];
+  const cond    = fxState?.condition ?? 0;
+
+  selectedCond = cond;
+  renderConditionPicker(cond);
+
+  document.getElementById('notes-input').value = fxState?.notes ?? '';
+
+  // Last assessed
+  const laEl = document.getElementById('last-assessed');
+  if (fxState?.assessedAt) {
+    const d = new Date(fxState.assessedAt);
+    laEl.textContent = `Last assessed: ${d.toLocaleDateString()} by ${fxState.assessedBy || 'unknown'}`;
+  } else {
+    laEl.textContent = 'Not yet assessed';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CONDITION PICKER
+// ════════════════════════════════════════════════════════════════════════════
+
+function renderConditionPicker(currentValue) {
+  const container = document.getElementById('condition-picker');
+  container.innerHTML = '';
+
+  polesData.conditionScale.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'cond-btn' + (c.value === currentValue ? ' selected' : '');
+    btn.style.background = c.color;
+    btn.dataset.value = c.value;
+
+    // Short label for display
+    const shortLabels = ['N/A','100%','>50%','<50%','Flkr','Off'];
+    btn.innerHTML = `${shortLabels[c.value]}<small>${c.value}</small>`;
+
+    btn.title = c.label;
+    btn.addEventListener('click', () => {
+      selectedCond = c.value;
+      document.querySelectorAll('.cond-btn').forEach(b => {
+        b.classList.toggle('selected', parseInt(b.dataset.value) === c.value);
+      });
+    });
+    container.appendChild(btn);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SAVE ASSESSMENT
+// ════════════════════════════════════════════════════════════════════════════
+
+function saveAssessment() {
+  if (!currentPole) return;
+
+  const inspector  = document.getElementById('inspector-input').value.trim();
+  const notes      = document.getElementById('notes-input').value.trim();
+  const now        = new Date().toISOString();
+  const deviceNum  = currentPole.deviceNum;
+  const tagId      = currentPole.tagId;
+  const itemType   = polesData.poleTypes[currentPole.type];
+  const fx         = itemType?.fixtures?.find(f => f.position === currentFxPos);
+
+  // Update current state (keyed by deviceNum)
+  if (!currentState[deviceNum]) currentState[deviceNum] = {};
+  currentState[deviceNum][currentFxPos] = {
+    condition:  selectedCond,
+    notes,
+    assessedAt: now,
+    assessedBy: inspector
+  };
+
+  // Build record
+  const record = {
+    assessedAt:          now,
+    assessedBy:          inspector,
+    poleTagId:           tagId,
+    deviceNum,
+    poleType:            currentPole.type,
+    locationId:          currentPole.locationId,
+    fixturePosition:     currentFxPos,
+    fixtureLabel:        fx?.label ?? '',
+    fixtureZone:         fx?.zone ?? '',
+    fixtureManufacturer: fx?.manufacturer ?? '',
+    fixtureModel:        fx?.model ?? '',
+    conditionValue:      selectedCond,
+    conditionLabel:      condLabel(selectedCond),
+    notes
+  };
+
+  assessmentLog.push(record);
+  saveToStorage();
+  saveToSheets(record);
+
+  refreshMarker(deviceNum);
+  updateFixtureTabDot(currentFxPos);
+  updateStats();
+
+  const laEl = document.getElementById('last-assessed');
+  laEl.textContent = `Saved ${new Date(now).toLocaleTimeString()} by ${inspector || 'unknown'}`;
+  showToast('Assessment saved!', 'success');
+}
+
+function updateFixtureTabDot(position) {
+  const tab = document.querySelector(`.fx-tab[data-pos="${position}"]`);
+  if (!tab) return;
+  const dot  = tab.querySelector('.fx-dot');
+  const cond = currentState[currentPole?.deviceNum]?.[position]?.condition ?? 0;
+  if (dot) dot.style.background = condColor(cond);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// INFO MODAL
+// ════════════════════════════════════════════════════════════════════════════
+
+function openInfoModal(item) {
+  const itemType = polesData.poleTypes[item.type];
+  document.getElementById('info-modal-title').textContent = item.deviceNum + ' — Details';
+
+  const e = item.electrical;
+  const missing = v => v == null ? '<span class="missing">Not on record</span>' : v;
+
+  const fixtureRows = (itemType?.fixtures ?? []).map(fx => `
+    <tr>
+      <td>${fx.label}</td>
+      <td>${fx.manufacturer}<br><strong>${fx.model}</strong><br><small>${fx.description}</small></td>
+    </tr>`).join('');
+
+  document.getElementById('info-modal-body').innerHTML = `
+    <div class="info-section">
+      <h3>Item Identification</h3>
+      <table class="info-table">
+        <tr><td>Tag ID</td>       <td>${missing(item.tagId)}</td></tr>
+        <tr><td>Device #</td>     <td>${missing(item.deviceNum)}</td></tr>
+        <tr><td>Type</td>         <td>${missing(item.type)}</td></tr>
+        <tr><td>Sub-Type</td>     <td>${missing(item.subType)}</td></tr>
+        <tr><td>Location</td>     <td>${missing(item.locationId)}</td></tr>
+      </table>
+    </div>
+    <div class="info-section">
+      <h3>Electrical</h3>
+      <table class="info-table">
+        <tr><td>Panel</td>          <td>${missing(e?.panel)}</td></tr>
+        <tr><td>Circuit Breaker</td><td>${missing(e?.circuitBreaker)}</td></tr>
+        <tr><td>Dimmer Module</td>  <td>${missing(e?.dimmerModule)}</td></tr>
+        <tr><td>Dimmer Channel</td> <td>${missing(e?.dimmerChannel)}</td></tr>
+        <tr><td>Control Location</td><td>${missing(e?.controlLocation)}</td></tr>
+        <tr><td>Control Label</td>  <td>${missing(e?.controlLabel)}</td></tr>
+      </table>
+    </div>
+    <div class="info-section">
+      <h3>Fixture Inventory</h3>
+      <table class="info-table">${fixtureRows}</table>
+    </div>
+  `;
+
+  openModal('info-modal');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// EXPORT CSV
+// ════════════════════════════════════════════════════════════════════════════
+
+function exportCSV() {
+  if (!assessmentLog.length) {
+    showToast('No assessment data to export yet.', 'error');
+    return;
+  }
+
+  const cols = [
+    'assessedAt','assessedBy','poleTagId','deviceNum','poleType','locationId',
+    'fixturePosition','fixtureLabel','fixtureZone','fixtureManufacturer','fixtureModel',
+    'conditionValue','conditionLabel','notes'
+  ];
+
+  const esc = v => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g,'""')}"` : s;
+  };
+
+  const rows = [cols.join(',')];
+  assessmentLog.forEach(r => rows.push(cols.map(c => esc(r[c])).join(',')));
+
+  const blob = new Blob([rows.join('\r\n')], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const ts   = new Date().toISOString().slice(0,10);
+  a.href     = url;
+  a.download = `GGP_Lighting_Assessment_${ts}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${assessmentLog.length} records.`, 'success');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STATS
+// ════════════════════════════════════════════════════════════════════════════
+
+function updateStats() {
+  const total    = polesData?.poles?.length ?? 0;
+  // Count items where at least one fixture has been assessed
+  const assessed = Object.keys(currentState).length;
+  document.getElementById('stat-total').textContent    = total;
+  document.getElementById('stat-assessed').textContent = assessed;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════════════════════════
+
+let toastTimer = null;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = 'toast', 2400);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TYPE VISIBILITY
+// ════════════════════════════════════════════════════════════════════════════
+
+function setTypeVisibility(type, visible) {
+  typeVisibility[type] = visible;
+  const lg = layerGroups[type];
+  if (!lg) return;
+  if (visible) {
+    lg.addTo(map);
+  } else {
+    map.removeLayer(lg);
+    // Close panel if currently viewing an item of this type
+    if (currentPole?.type === type) closePanel();
+  }
+  localStorage.setItem(STORAGE_VISIBILITY, JSON.stringify(typeVisibility));
+}
+
+function buildVisibilityCheckboxes() {
+  const container = document.getElementById('visibility-checkboxes');
+  if (!container || !polesData) return;
+  container.innerHTML = '';
+
+  Object.entries(polesData.poleTypes).forEach(([type, def]) => {
+    const count   = polesData.poles.filter(p => p.type === type).length;
+    const checked = typeVisibility[type] !== false;
+
+    const row = document.createElement('label');
+    row.className = 'visibility-row';
+    row.innerHTML = `
+      <input type="checkbox" data-type="${type}" ${checked ? 'checked' : ''} />
+      <span class="vis-type">${type}</span>
+      <span class="vis-desc">${def.description}</span>
+      <span class="vis-count">${count}</span>
+    `;
+    row.querySelector('input').addEventListener('change', e => {
+      setTypeVisibility(type, e.target.checked);
+    });
+    container.appendChild(row);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GPS LOCATION
+// ════════════════════════════════════════════════════════════════════════════
+
+let locationMarker  = null;   // blue dot marker
+let locationPulse   = null;   // pulsing ring marker
+let watchId         = null;   // geolocation watch handle
+
+function initLocation() {
+  if (!navigator.geolocation) {
+    showToast('GPS not available on this device.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-locate');
+
+  // If already watching, stop and clean up
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    if (locationMarker) { map.removeLayer(locationMarker); locationMarker = null; }
+    if (locationPulse)  { map.removeLayer(locationPulse);  locationPulse  = null; }
+    btn.classList.remove('active');
+    btn.title = 'Find my location';
+    return;
+  }
+
+  // Start watching position
+  btn.title = 'Stop location tracking';
+  showToast('Acquiring GPS position…');
+
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+
+      // Place or update the pulsing ring (accuracy circle approximation)
+      const pulseIcon = L.divIcon({
+        className: '',
+        iconSize:  [40, 40],
+        iconAnchor:[20, 20],
+        html: '<div class="location-dot-pulse"></div>'
+      });
+      const dotIcon = L.divIcon({
+        className: '',
+        iconSize:  [16, 16],
+        iconAnchor:[8, 8],
+        html: '<div class="location-dot"></div>'
+      });
+
+      if (!locationPulse) {
+        locationPulse  = L.marker([lat, lng], { icon: pulseIcon, interactive: false, zIndexOffset: -100 }).addTo(map);
+        locationMarker = L.marker([lat, lng], { icon: dotIcon,   interactive: false, zIndexOffset: 500  }).addTo(map);
+        // First fix — pan to location and mark button active
+        map.panTo([lat, lng], { animate: true });
+        btn.classList.add('active');
+        showToast(`Location found (±${Math.round(accuracy)}m)`, 'success');
+      } else {
+        locationPulse.setLatLng([lat, lng]);
+        locationMarker.setLatLng([lat, lng]);
+      }
+    },
+    err => {
+      watchId = null;
+      btn.classList.remove('active');
+      btn.title = 'Find my location';
+      const msgs = {
+        1: 'Location permission denied.',
+        2: 'GPS position unavailable.',
+        3: 'GPS request timed out.'
+      };
+      showToast(msgs[err.code] ?? 'GPS error.', 'error');
+    },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+function findMe() {
+  // If location is already active, just re-center on current dot
+  if (locationMarker) {
+    map.panTo(locationMarker.getLatLng(), { animate: true });
+    return;
+  }
+  initLocation();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// EVENT WIRING
+// ════════════════════════════════════════════════════════════════════════════
+
+function initEventHandlers() {
+  // Header
+  document.getElementById('btn-locate').addEventListener('click', findMe);
+  document.getElementById('btn-export').addEventListener('click', exportCSV);
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    document.getElementById('setting-inspector').value =
+      document.getElementById('inspector-input').value;
+    buildVisibilityCheckboxes();
+    openModal('settings-modal');
+  });
+
+  // Panel
+  document.getElementById('btn-close').addEventListener('click', closePanel);
+  document.getElementById('btn-info').addEventListener('click', () => {
+    if (currentPole) openInfoModal(currentPole);
+  });
+  document.getElementById('btn-save').addEventListener('click', saveAssessment);
+
+  // Inspector name sync
+  document.getElementById('inspector-input').addEventListener('change', e => {
+    localStorage.setItem(STORAGE_INSP, e.target.value.trim());
+    document.getElementById('setting-inspector').value = e.target.value;
+  });
+
+  // Settings
+  document.getElementById('setting-inspector').addEventListener('change', e => {
+    const val = e.target.value.trim();
+    localStorage.setItem(STORAGE_INSP, val);
+    document.getElementById('inspector-input').value = val;
+  });
+  document.getElementById('btn-clear-data').addEventListener('click', clearAllData);
+
+  // Modal close buttons
+  document.querySelectorAll('.modal-close-btn').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.modal));
+  });
+
+  // Close modal on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
+
+  // Swipe down to close panel on mobile
+  let touchStartY = 0;
+  const panel = document.getElementById('panel');
+  panel.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+  panel.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (dy > 60) closePanel();
+  }, { passive: true });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GOOGLE SHEETS INTEGRATION
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Derive currentState from an array of assessment records.
+ * For each deviceNum+fixturePosition, keep only the most recent record.
+ */
+function deriveStateFromRecords(records) {
+  const state = {};
+  // Sort oldest first so newest wins when we overwrite
+  const sorted = [...records].sort((a, b) =>
+    String(a.assessedAt).localeCompare(String(b.assessedAt))
+  );
+  sorted.forEach(r => {
+    const dev = r.deviceNum;
+    const pos = parseInt(r.fixturePosition);
+    if (!dev || isNaN(pos)) return;
+    if (!state[dev]) state[dev] = {};
+    state[dev][pos] = {
+      condition:  parseInt(r.conditionValue) || 0,
+      notes:      r.notes || '',
+      assessedAt: r.assessedAt || '',
+      assessedBy: r.assessedBy || ''
+    };
+  });
+  return state;
+}
+
+async function loadFromSheets() {
+  if (!SHEETS_URL) return;   // not yet configured — use localStorage only
+
+  try {
+    const resp = await fetch(SHEETS_URL + '?action=load');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message);
+
+    assessmentLog = data.records;
+    currentState  = deriveStateFromRecords(data.records);
+
+    // Persist to localStorage as cache
+    localStorage.setItem(STORAGE_STATE, JSON.stringify(currentState));
+    localStorage.setItem(STORAGE_LOG,   JSON.stringify(assessmentLog));
+
+    // Refresh all markers with authoritative state from Sheets
+    refreshAllMarkers();
+    updateStats();
+    console.log(`Loaded ${data.records.length} records from Google Sheets.`);
+  } catch(err) {
+    console.warn('Could not load from Google Sheets — using local cache.', err.message);
+    showToast('Using cached data (Sheets unavailable).', '');
+  }
+}
+
+async function saveToSheets(record) {
+  if (!SHEETS_URL) return;
+
+  try {
+    // Use GET with encoded payload — avoids CORS preflight that blocks POST
+    const url = SHEETS_URL + '?action=save&data=' + encodeURIComponent(JSON.stringify(record));
+    await fetch(url);
+  } catch(err) {
+    console.warn('Could not save to Google Sheets:', err.message);
+    showToast('Saved locally — Sheets sync failed.', 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════════════════════════
+
+async function init() {
+  loadFromStorage();
+
+  try {
+    const resp = await fetch('data/poles.json');
+    if (!resp.ok) throw new Error('Could not load poles.json');
+    polesData = await resp.json();
+  } catch(err) {
+    document.getElementById('map').innerHTML =
+      `<div style="padding:40px;text-align:center;color:#b91c1c;font-size:1rem">
+        <strong>Error loading item data.</strong><br>
+        Make sure poles.json is in the <code>data/</code> folder and you are running
+        via Live Server (not opening the file directly).<br><br>
+        <small>${err.message}</small>
+      </div>`;
+    return;
+  }
+
+  initMap();
+  initEventHandlers();
+  renderMarkers();
+  updateStats();
+  document.getElementById('version-display').textContent = APP_VERSION;
+
+  // Load authoritative state from Sheets (non-blocking — markers already
+  // show cached localStorage state, then update once Sheets responds)
+  loadFromSheets();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
