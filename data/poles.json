@@ -4155,6 +4155,114 @@
       }
     },
     {
+      "tagId": "LLWN.LPO.0335",
+      "deviceNum": "T3.12",
+      "type": "T3",
+      "description": "T3.12 Light Pole",
+      "locationId": "LLWN-Pathways",
+      "subType": "Structura, 14', Tapered Square",
+      "lat": 36.1219314983,
+      "lng": -95.9863202168,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "?",
+        "dimmerModule": 0,
+        "dimmerChannel": "?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
+      }
+    },
+    {
+      "tagId": "LLWN.LPO.0336",
+      "deviceNum": "T3.13",
+      "type": "T3",
+      "description": "T3.13 Light Pole",
+      "locationId": "LLWN-Pathways",
+      "subType": "Structura, 14', Tapered Square",
+      "lat": 36.1218468551,
+      "lng": -95.9864969257,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "?",
+        "dimmerModule": 0,
+        "dimmerChannel": "?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
+      }
+    },
+    {
+      "tagId": "CROS.LPO.0337",
+      "deviceNum": "T3.14",
+      "type": "T3",
+      "description": "T3.14 Light Pole",
+      "locationId": "CROS-Rocky Point Overlook",
+      "subType": "Structura, 14', Tapered Square",
+      "lat": 36.1218458508,
+      "lng": -95.986264356,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "?",
+        "dimmerModule": 0,
+        "dimmerChannel": "?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
+      }
+    },
+    {
+      "tagId": "CROS.LPO.0338",
+      "deviceNum": "T3.15",
+      "type": "T3",
+      "description": "T3.15 Light Pole",
+      "locationId": "CROS-Rocky Point Overlook",
+      "subType": "Structura, 14', Tapered Square",
+      "lat": 36.1217210335,
+      "lng": -95.9862357942,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "?",
+        "dimmerModule": 0,
+        "dimmerChannel": "?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
+      }
+    },
+    {
+      "tagId": "CROS.LPO.0339",
+      "deviceNum": "T3.16",
+      "type": "T3",
+      "description": "T3.16 Light Pole",
+      "locationId": "CROS-Rocky Point Overlook",
+      "subType": "Structura, 14', Tapered Square",
+      "lat": 36.1216560898,
+      "lng": -95.9860886964,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "?",
+        "dimmerModule": 0,
+        "dimmerChannel": "?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
+      }
+    },
+    {
+      "tagId": "CROS.LPO.0340",
+      "deviceNum": "T3.17",
+      "type": "T3",
+      "description": "T3.17 Light Pole",
+      "locationId": "CROS-Rocky Point Overlook",
+      "subType": "Structura, 14', Tapered Square",
+      "lat": 36.1215151401,
+      "lng": -95.9860321709,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "?",
+        "dimmerModule": 0,
+        "dimmerChannel": "?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
+      }
+    },
+    {
       "tagId": "VOLC.LPO.0224",
       "deviceNum": "T3A.02",
       "type": "T3A",
@@ -5001,6 +5109,24 @@
       }
     },
     {
+      "tagId": "WAVE.LPO.0345",
+      "deviceNum": "T4.100",
+      "type": "T4",
+      "description": "T4.100 Light Pole",
+      "locationId": "WAVE-Pathways",
+      "subType": "Structura, 45', Tapered Square",
+      "lat": 36.1208134482,
+      "lng": -95.9859293612,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "Top: ? / Mid: ?",
+        "dimmerModule": 0,
+        "dimmerChannel": "Top: ? / Mid: ?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
+      }
+    },
+    {
       "tagId": "SKYG.LPO.0092",
       "deviceNum": "T4.101",
       "type": "T4",
@@ -5484,6 +5610,24 @@
         "dimmerChannel": "Top: 3 / Mid: 4",
         "controlLocation": "Boathouse",
         "controlLabel": "BH Lawn T/M"
+      }
+    },
+    {
+      "tagId": "CROS.LPO.0346",
+      "deviceNum": "T4.128",
+      "type": "T4",
+      "description": "T4.128 Light Pole",
+      "locationId": "CROS-Rocky Point Overlook",
+      "subType": "Structura, 45', Tapered Square",
+      "lat": 36.1214045771,
+      "lng": -95.9860011386,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "Top: ? / Mid: ?",
+        "dimmerModule": 0,
+        "dimmerChannel": "Top: ? / Mid: ?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
       }
     },
     {
@@ -6549,6 +6693,24 @@
       }
     },
     {
+      "tagId": "LLWN.LPO.0341",
+      "deviceNum": "T4.72",
+      "type": "T4",
+      "description": "T4.72 Light Pole",
+      "locationId": "LLWN-Pathways",
+      "subType": "Structura, 45', Tapered Square",
+      "lat": 36.1228684530,
+      "lng": -95.9867464133,
+      "electrical": {
+        "panel": "LCP-BH-1",
+        "circuitBreaker": "Top: ? / Mid: ?",
+        "dimmerModule": 0,
+        "dimmerChannel": "Top: ? / Mid: ?",
+        "controlLocation": "Boathouse",
+        "controlLabel": "?"
+      }
+    },
+    {
       "tagId": "RPET.LPO.0071",
       "deviceNum": "T4.73",
       "type": "T4",
@@ -6564,6 +6726,42 @@
         "dimmerChannel": "Top: 7 / Mid: 6",
         "controlLocation": "Boathouse",
         "controlLabel": "Path: L-view Lawn T/JogTrail M"
+      }
+    },
+    {
+      "tagId": "LLWN.LPO.0342",
+      "deviceNum": "T4.74",
+      "type": "T4",
+      "description": "T4.74 Light Pole",
+      "locationId": "LLWN-Pathways",
+      "subType": "Structura, 45', Tapered Square",
+      "lat": 36.1226744388,
+      "lng": -95.9865991276,
+      "electrical": {
+        "panel": "LCP-BH-1",
+        "circuitBreaker": "Top: ? / Mid: ?",
+        "dimmerModule": 0,
+        "dimmerChannel": "Top: ? / Mid: ?",
+        "controlLocation": "Boathouse",
+        "controlLabel": "?"
+      }
+    },
+    {
+      "tagId": "LLWN.LPO.0343",
+      "deviceNum": "T4.76",
+      "type": "T4",
+      "description": "T4.76 Light Pole",
+      "locationId": "LLWN-Pathways",
+      "subType": "Structura, 45', Tapered Square",
+      "lat": 36.1222925790,
+      "lng": -95.9866438843,
+      "electrical": {
+        "panel": "LCP-BH-1",
+        "circuitBreaker": "Top: ? / Mid: ?",
+        "dimmerModule": 0,
+        "dimmerChannel": "Top: ? / Mid: ?",
+        "controlLocation": "Boathouse",
+        "controlLabel": "?"
       }
     },
     {
@@ -6852,6 +7050,24 @@
         "dimmerChannel": "Top: 7 / Mid: 8",
         "controlLocation": "Maintenance Building",
         "controlLabel": "Path - Jog-River T/M"
+      }
+    },
+    {
+      "tagId": "WAVE.LPO.0344",
+      "deviceNum": "T4.95",
+      "type": "T4",
+      "description": "T4.95 Light Pole",
+      "locationId": "WAVE-Pathways",
+      "subType": "Structura, 45', Tapered Square",
+      "lat": 36.1211992538,
+      "lng": -95.9859724348,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": "Top: ? / Mid: ?",
+        "dimmerModule": 0,
+        "dimmerChannel": "Top: ? / Mid: ?",
+        "controlLocation": "Maintenance Building",
+        "controlLabel": "?"
       }
     },
     {
