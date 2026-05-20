@@ -117,7 +117,7 @@
           "label": "Pathway",
           "zone": "Top",
           "manufacturer": "WE-EF",
-          "model": "661-1345 RFL530-LED",
+          "model": "661-1345",
           "description": "Pathway Light"
         }
       ]
@@ -148,7 +148,7 @@
           "label": "Pathway",
           "zone": "Mid",
           "manufacturer": "WE-EF",
-          "model": "661-1345 RFL530-LED",
+          "model": "661-1345",
           "description": "Pathway Light"
         }
       ]

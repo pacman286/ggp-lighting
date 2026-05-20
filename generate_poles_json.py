@@ -34,6 +34,13 @@ EXCEL_SOURCES = {
 
 OUTPUT_FILE = "data/poles.json"
 
+# Mixed-type additions files — for new poles that span existing types.
+# Each file should have the same column structure as type-specific files
+# but may contain multiple types in a single sheet.
+ADDITIONAL_FILES = [
+    "Additional_Light_Poles.xlsx",
+]
+
 # Lighting item type definitions.
 # Fixtures are listed top-down, left-to-right within each zone.
 # Add new type blocks here when onboarding additional types.
@@ -78,7 +85,7 @@ POLE_TYPE_DEFINITIONS = {
                 "label": "Pathway",
                 "zone": "Top",
                 "manufacturer": "WE-EF",
-                "model": "661-1345 RFL530-LED",
+                "model": "661-1345",
                 "description": "Pathway Light"
             }
         ]
@@ -109,7 +116,7 @@ POLE_TYPE_DEFINITIONS = {
                 "label": "Pathway",
                 "zone": "Mid",
                 "manufacturer": "WE-EF",
-                "model": "661-1345 RFL530-LED",
+                "model": "661-1345",
                 "description": "Pathway Light"
             }
         ]
@@ -607,14 +614,18 @@ def parse_sheet(wb, sheet_name):
     return [dict(zip(headers, row)) for row in rows[1:] if any(v is not None for v in row)]
 
 def str_or_null(val):
-    """Return stripped string or None."""
+    """Return stripped string or None. Treats '?' as missing data."""
     if val is None:
         return None
     s = str(val).strip()
-    return s if s else None
+    if s in ('', '?'):
+        return None
+    return s
 
 def int_or_null(val):
-    """Return int or None."""
+    """Return int or None. Treats '?' as missing data."""
+    if val in (None, '?', ''):
+        return None
     try:
         return int(val)
     except (TypeError, ValueError):
@@ -622,14 +633,18 @@ def int_or_null(val):
 
 def extract_coords(row):
     """
-    Extract lat/lng robustly regardless of column label accuracy.
-    Previous files had 'Lattitude' and 'Longitude' headers swapped.
-    T9 onward has them correct. We detect by value range:
+    Extract lat/lng robustly regardless of column label accuracy or typos.
+    Handles: 'Lattitude'/'Longitude', 'Lattitude'/'Longitute', and swapped variants.
+    Detects by value range:
       latitude  for Tulsa is ~36.1  (positive, 30-40)
       longitude for Tulsa is ~-95.9 (negative, -100 to -90)
     """
-    col_a_val = row.get("Lattitude")
-    col_b_val = row.get("Longitude")
+    # Try all known column name variants for each axis
+    lat_keys = ['Lattitude', 'Latitude']
+    lng_keys = ['Longitude', 'Longitute', 'Longitude ']
+
+    col_a_val = next((row[k] for k in lat_keys if k in row and row[k] is not None), None)
+    col_b_val = next((row[k] for k in lng_keys if k in row and row[k] is not None), None)
 
     try:
         a = float(col_a_val)
@@ -683,12 +698,48 @@ def process_poles(wb):
     poles.sort(key=lambda p: p["deviceNum"] or "")
     return poles
 
+def process_mixed_file(wb):
+    """Process an additions file containing multiple item types in one sheet.
+    The Type column in each row determines the item type."""
+    data_sheet = next(
+        (s for s in wb.sheetnames if not s.endswith('Definition')), None
+    )
+    if not data_sheet:
+        print(f"  WARNING: No data sheet found. Sheets: {wb.sheetnames}")
+        return []
+
+    rows = parse_sheet(wb, data_sheet)
+    poles = []
+    for r in rows:
+        lat, lng = extract_coords(r)
+        pole = {
+            "tagId":          str_or_null(r.get("Tag #")),
+            "deviceNum":      str_or_null(r.get("Device #")),
+            "type":           str_or_null(r.get("Type")),
+            "description":    str_or_null(r.get("Description")),
+            "locationId":     str_or_null(r.get("Location ID")),
+            "subType":        str_or_null(r.get("Sub Type Name")),
+            "lat":            lat,
+            "lng":            lng,
+            "electrical": {
+                "panel":           str_or_null(r.get("Panel")),
+                "circuitBreaker":  str_or_null(r.get("Circuit Breaker")),
+                "dimmerModule":    int_or_null(r.get("Dimmer Module")),
+                "dimmerChannel":   str_or_null(r.get("Dimmer Channel")),
+                "controlLocation": str_or_null(r.get("Control Location")),
+                "controlLabel":    str_or_null(r.get("Control Label"))
+            }
+        }
+        poles.append(pole)
+    return poles
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
     poles = []
     missing = []
 
+    # Process type-specific Excel files
     for ptype, fname in sorted(EXCEL_SOURCES.items()):
         if not os.path.exists(fname):
             print(f"WARNING: {fname} not found — skipping {ptype}")
@@ -700,16 +751,34 @@ def main():
         print(f"  Processed {len(batch)} {ptype} items")
         poles.extend(batch)
 
+    # Process mixed-type additions files
+    for fname in ADDITIONAL_FILES:
+        if not os.path.exists(fname):
+            print(f"WARNING: {fname} not found — skipping additions file")
+            missing.append(fname)
+            continue
+        print(f"Reading additions file {fname}...")
+        wb = load_workbook(fname, read_only=True)
+        batch = process_mixed_file(wb)
+        # Report breakdown by type
+        type_counts = {}
+        for p in batch:
+            t = p['type'] or 'Unknown'
+            type_counts[t] = type_counts.get(t, 0) + 1
+        for t, count in sorted(type_counts.items()):
+            print(f"  Processed {count} {t} items")
+        poles.extend(batch)
+
     if missing:
         print(f"\nNote: {len(missing)} source file(s) were not found and were skipped.")
 
     # Sort all poles together by type then device number
-    poles.sort(key=lambda p: (p["type"], p["deviceNum"] or ""))
+    poles.sort(key=lambda p: (p["type"] or "", p["deviceNum"] or ""))
 
     output = {
         "meta": {
             "version": "1.0",
-            "generatedFrom": list(EXCEL_SOURCES.values()),
+            "generatedFrom": list(EXCEL_SOURCES.values()) + ADDITIONAL_FILES,
             "description": "GGP Lighting Assessment Tool — Pole Configuration"
         },
         "mapConfig":        MAP_CONFIG,
