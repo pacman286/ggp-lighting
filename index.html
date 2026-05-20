@@ -407,6 +407,12 @@
   <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c3)"></div> &lt;50% Functional</div>
   <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c4)"></div> Flickering</div>
   <div class="legend-row"><div class="legend-dot" style="background:var(--clr-c5)"></div> Non-Functional</div>
+  <div class="legend-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--clr-border)">
+    <div class="legend-dot" style="background:#888;display:flex;align-items:center;justify-content:center">
+      <div style="width:4px;height:4px;border-radius:50%;background:#fff"></div>
+    </div>
+    Partial assessment
+  </div>
 </div>
 
 <!-- ── Detail Panel ─────────────────────────────────────────────────────────── -->
@@ -601,8 +607,16 @@ function worstCondition(deviceNum) {
   return Math.max(...values);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// MAP
+// Returns true if a pole has been assessed but not all fixtures have a record
+function isPartiallyAssessed(pole) {
+  const itemState = currentState[pole.deviceNum];
+  if (!itemState) return false;  // not assessed at all
+  const poleType = polesData?.poleTypes[pole.type];
+  if (!poleType) return false;
+  const totalFixtures = poleType.fixtures.length;
+  const assessedFixtures = Object.keys(itemState).length;
+  return assessedFixtures > 0 && assessedFixtures < totalFixtures;
+}
 // ════════════════════════════════════════════════════════════════════════════
 
 function initMap() {
@@ -645,12 +659,17 @@ function initMap() {
 // MARKERS
 // ════════════════════════════════════════════════════════════════════════════
 
-function makeIcon(color, label) {
+function makeIcon(color, partial) {
+  const dot = partial
+    ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                  width:6px;height:6px;border-radius:50%;background:#fff;
+                  box-shadow:0 0 2px rgba(0,0,0,0.5);pointer-events:none"></div>`
+    : '';
   return L.divIcon({
     className: '',
     iconSize:  [MARKER_SIZE, MARKER_SIZE],
     iconAnchor:[MARKER_SIZE/2, MARKER_SIZE/2],
-    html: `<div class="pole-marker" style="width:${MARKER_SIZE}px;height:${MARKER_SIZE}px;background:${color}"></div>`
+    html: `<div class="pole-marker" style="width:${MARKER_SIZE}px;height:${MARKER_SIZE}px;background:${color};position:relative">${dot}</div>`
   });
 }
 
@@ -668,12 +687,11 @@ function renderMarkers() {
     if (pole.lat == null || pole.lng == null) return;
 
     const deviceNum = pole.deviceNum;
-    const color = condColor(worstCondition(deviceNum));
-    // Show short device label (drop type prefix: "T4." -> digits only)
-    const label = deviceNum ? deviceNum.replace(/^[A-Z0-9]+\./,'') : '';
+    const color   = condColor(worstCondition(deviceNum));
+    const partial = isPartiallyAssessed(pole);
 
     const marker = L.marker([pole.lat, pole.lng], {
-      icon:  makeIcon(color, label),
+      icon:  makeIcon(color, partial),
       title: `${deviceNum} — ${pole.locationId}`
     });
 
@@ -695,9 +713,9 @@ function refreshMarker(deviceNum) {
   if (!marker) return;
   const pole  = polesData.poles.find(p => p.deviceNum === deviceNum);
   if (!pole) return;
-  const color = condColor(worstCondition(deviceNum));
-  const label = deviceNum ? deviceNum.replace(/^[A-Z0-9]+\./,'') : '';
-  marker.setIcon(makeIcon(color, label));
+  const color   = condColor(worstCondition(deviceNum));
+  const partial = isPartiallyAssessed(pole);
+  marker.setIcon(makeIcon(color, partial));
 }
 
 function refreshAllMarkers() {
