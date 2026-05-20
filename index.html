@@ -598,23 +598,27 @@ function condLabel(value) {
   return polesData?.conditionScale?.find(c => c.value === value)?.label ?? 'Unknown';
 }
 
-// Worst condition among all assessed fixtures on an item (0 = not assessed)
+// Worst condition among genuinely assessed fixtures (condition > 0) on an item
+// Ignores condition 0 (Not Assessed) so one unassessed fixture doesn't mask others
 function worstCondition(deviceNum) {
   const itemState = currentState[deviceNum];
   if (!itemState) return 0;
-  const values = Object.values(itemState).map(f => f.condition);
+  const values = Object.values(itemState)
+    .map(f => f.condition)
+    .filter(c => c > 0);
   if (!values.length) return 0;
   return Math.max(...values);
 }
 
-// Returns true if a pole has been assessed but not all fixtures have a record
+// Returns true if a pole has at least one fixture genuinely assessed (condition > 0)
+// but not all fixtures have been genuinely assessed
 function isPartiallyAssessed(pole) {
   const itemState = currentState[pole.deviceNum];
-  if (!itemState) return false;  // not assessed at all
+  if (!itemState) return false;
   const poleType = polesData?.poleTypes[pole.type];
   if (!poleType) return false;
-  const totalFixtures = poleType.fixtures.length;
-  const assessedFixtures = Object.keys(itemState).length;
+  const totalFixtures    = poleType.fixtures.length;
+  const assessedFixtures = Object.values(itemState).filter(f => f.condition > 0).length;
   return assessedFixtures > 0 && assessedFixtures < totalFixtures;
 }
 // ════════════════════════════════════════════════════════════════════════════
