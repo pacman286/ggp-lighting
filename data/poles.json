@@ -109,7 +109,7 @@
     },
     "T3": {
       "name": "T3",
-      "description": "Single-fixture Pathway Pole",
+      "description": "Single-fixture Pole",
       "subType": "Structura, 14', Tapered Square",
       "fixtures": [
         {
@@ -124,7 +124,7 @@
     },
     "T3A": {
       "name": "T3A",
-      "description": "Multi-fixture Pathway Pole (Variant A)",
+      "description": "Multi-fixture Pathway Pole",
       "subType": "Structura, 18', Tapered Square",
       "fixtures": [
         {
@@ -194,7 +194,7 @@
     },
     "T4A": {
       "name": "T4A",
-      "description": "Multi-fixture Pole (Variant A)",
+      "description": "Multi-fixture Pole",
       "subType": "Structura, 45', Tapered Square",
       "fixtures": [
         {
@@ -296,7 +296,7 @@
     },
     "T9": {
       "name": "T9",
-      "description": "Ceiling-Mount Fixture",
+      "description": "Crow Creek Bridge Path Fixture",
       "subType": "Ceiling-Mount Fixture",
       "fixtures": [
         {
@@ -311,7 +311,7 @@
     },
     "T10": {
       "name": "T10",
-      "description": "Suspended Fixture",
+      "description": "Sensory Garden Fixture",
       "subType": "Suspended Fixture",
       "fixtures": [
         {
@@ -326,7 +326,7 @@
     },
     "T14": {
       "name": "T14",
-      "description": "Multi-fixture Garden Spot Pole",
+      "description": "Multi-fixture Pole",
       "subType": "Structura, 14', Tapered Square",
       "fixtures": [
         {
@@ -365,7 +365,7 @@
     },
     "T14A": {
       "name": "T14A",
-      "description": "Multi-fixture Spot Pole (Variant A)",
+      "description": "Multi-fixture Pole",
       "subType": "Structura, 14', Tapered Square",
       "fixtures": [
         {
@@ -388,7 +388,7 @@
     },
     "T24": {
       "name": "T24",
-      "description": "Multi-fixture Bike Park Pole",
+      "description": "Multi-fixture Bike/Skate Pole",
       "subType": "Timber, 45', Round",
       "fixtures": [
         {
@@ -451,7 +451,7 @@
     },
     "T24A": {
       "name": "T24A",
-      "description": "Multi-fixture Skate Park Pole (Variant A)",
+      "description": "Multi-fixture Bike/Skate Pole",
       "subType": "Timber, 45', Round",
       "fixtures": [
         {
@@ -506,7 +506,7 @@
     },
     "T24B": {
       "name": "T24B",
-      "description": "Multi-fixture Skate Park Pole (Variant B)",
+      "description": "Multi-fixture Bike/Skate Pole",
       "subType": "Timber, 45', Round",
       "fixtures": [
         {
@@ -561,7 +561,7 @@
     },
     "T24C": {
       "name": "T24C",
-      "description": "Multi-fixture Bike/Skate Park Pole (Variant C)",
+      "description": "Multi-fixture Bike/Skate Pole",
       "subType": "Timber, 45', Round",
       "fixtures": [
         {
@@ -4165,11 +4165,11 @@
       "lng": -95.9863202168,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "?",
-        "dimmerModule": 0,
-        "dimmerChannel": "?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -4183,11 +4183,11 @@
       "lng": -95.9864969257,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "?",
-        "dimmerModule": 0,
-        "dimmerChannel": "?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -4201,11 +4201,11 @@
       "lng": -95.986264356,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "?",
-        "dimmerModule": 0,
-        "dimmerChannel": "?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -4219,11 +4219,11 @@
       "lng": -95.9862357942,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "?",
-        "dimmerModule": 0,
-        "dimmerChannel": "?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -4237,11 +4237,11 @@
       "lng": -95.9860886964,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "?",
-        "dimmerModule": 0,
-        "dimmerChannel": "?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -4255,11 +4255,11 @@
       "lng": -95.9860321709,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "?",
-        "dimmerModule": 0,
-        "dimmerChannel": "?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -5119,11 +5119,11 @@
       "lng": -95.9859293612,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "Top: ? / Mid: ?",
-        "dimmerModule": 0,
-        "dimmerChannel": "Top: ? / Mid: ?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -5196,6 +5196,24 @@
         "dimmerChannel": "Top: 1 / Mid: 2",
         "controlLocation": "Maintenance Building",
         "controlLabel": "Path - Riverview T/M"
+      }
+    },
+    {
+      "tagId": "WAVE.LPO.0347",
+      "deviceNum": "T4.105",
+      "type": "T4",
+      "description": "T4.105 Light Pole",
+      "locationId": "WAVE-Pathways",
+      "subType": "Structura, 45', Tapered Square",
+      "lat": 36.1204304861,
+      "lng": -95.9859830618,
+      "electrical": {
+        "panel": "LCP-MF-1",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
+        "controlLocation": "Maintenance Building",
+        "controlLabel": null
       }
     },
     {
@@ -5623,11 +5641,11 @@
       "lng": -95.9860011386,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "Top: ? / Mid: ?",
-        "dimmerModule": 0,
-        "dimmerChannel": "Top: ? / Mid: ?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -6699,15 +6717,15 @@
       "description": "T4.72 Light Pole",
       "locationId": "LLWN-Pathways",
       "subType": "Structura, 45', Tapered Square",
-      "lat": 36.1228684530,
+      "lat": 36.122868453,
       "lng": -95.9867464133,
       "electrical": {
         "panel": "LCP-BH-1",
-        "circuitBreaker": "Top: ? / Mid: ?",
-        "dimmerModule": 0,
-        "dimmerChannel": "Top: ? / Mid: ?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Boathouse",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -6739,11 +6757,11 @@
       "lng": -95.9865991276,
       "electrical": {
         "panel": "LCP-BH-1",
-        "circuitBreaker": "Top: ? / Mid: ?",
-        "dimmerModule": 0,
-        "dimmerChannel": "Top: ? / Mid: ?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Boathouse",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -6753,15 +6771,15 @@
       "description": "T4.76 Light Pole",
       "locationId": "LLWN-Pathways",
       "subType": "Structura, 45', Tapered Square",
-      "lat": 36.1222925790,
+      "lat": 36.122292579,
       "lng": -95.9866438843,
       "electrical": {
         "panel": "LCP-BH-1",
-        "circuitBreaker": "Top: ? / Mid: ?",
-        "dimmerModule": 0,
-        "dimmerChannel": "Top: ? / Mid: ?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Boathouse",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
@@ -7063,11 +7081,11 @@
       "lng": -95.9859724348,
       "electrical": {
         "panel": "LCP-MF-1",
-        "circuitBreaker": "Top: ? / Mid: ?",
-        "dimmerModule": 0,
-        "dimmerChannel": "Top: ? / Mid: ?",
+        "circuitBreaker": null,
+        "dimmerModule": null,
+        "dimmerChannel": null,
         "controlLocation": "Maintenance Building",
-        "controlLabel": "?"
+        "controlLabel": null
       }
     },
     {
