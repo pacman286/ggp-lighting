@@ -1245,6 +1245,9 @@ function initEventHandlers() {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : '');
     localStorage.setItem(STORAGE_DARKMODE, dark ? 'true' : 'false');
   });
+
+  // Settings — inspector name sync
+  document.getElementById('setting-inspector').addEventListener('change', e => {
     const val = e.target.value.trim();
     localStorage.setItem(STORAGE_INSP, val);
     document.getElementById('inspector-input').value = val;
