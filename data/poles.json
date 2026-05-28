@@ -1911,8 +1911,8 @@
       "description": "T14A.03 Light Pole",
       "locationId": "LODG-Pathways",
       "subType": "Structura, 14', Tapered Square",
-      "lat": 36.1249181192,
-      "lng": -95.9840204509,
+      "lat": 36.1249227675,
+      "lng": -95.9840430766,
       "electrical": {
         "panel": "LCP-LG-1",
         "circuitBreaker": "37",
@@ -1929,8 +1929,8 @@
       "description": "T14A.04 Light Pole",
       "locationId": "LODG-Pathways",
       "subType": "Structura, 14', Tapered Square",
-      "lat": 36.1249998961,
-      "lng": -95.9838916777,
+      "lat": 36.1250537217,
+      "lng": -95.9839291558,
       "electrical": {
         "panel": "LCP-LG-1",
         "circuitBreaker": "37",
@@ -4089,8 +4089,8 @@
       "description": "T3.08 Light Pole",
       "locationId": "FOUR-30th Street Entry",
       "subType": "Structura, 14', Tapered Square",
-      "lat": 36.120595963,
-      "lng": -95.9846261534,
+      "lat": 36.1205899437,
+      "lng": -95.9845899058,
       "electrical": {
         "panel": "LCP-MF-1",
         "circuitBreaker": "40",
