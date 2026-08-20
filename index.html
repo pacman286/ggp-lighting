@@ -370,6 +370,23 @@
     /* Active state for Find Me button */
     #btn-locate.active { background: rgba(37,99,235,0.5); }
 
+    /* ── Refresh button ─────────────────────────────────────────────────────── */
+    #btn-refresh { position: relative; }
+    #btn-refresh.spinning { animation: spin 0.9s linear infinite; }
+    #btn-refresh:disabled { opacity: 0.6; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Pending-sync count badge */
+    #pending-badge {
+      display: none;
+      position: absolute; top: -4px; right: -4px;
+      min-width: 16px; height: 16px; padding: 0 4px;
+      border-radius: 8px; background: #dc2626; color: #fff;
+      font-size: 0.62rem; font-weight: 700; line-height: 1;
+      align-items: center; justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
     /* ── Toast ──────────────────────────────────────────────────────────────── */
     #toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -413,6 +430,9 @@
   <h1>GGP <span>Lighting</span> Assessment</h1>
   <div class="header-btns">
     <button class="header-btn icon" id="btn-locate" title="Find my location">⊕</button>
+    <button class="header-btn icon" id="btn-refresh" title="Refresh from server">
+      ⟳<span id="pending-badge"></span>
+    </button>
     <button class="header-btn" id="btn-export" title="Export assessment log to CSV">Export CSV</button>
     <button class="header-btn icon" id="btn-settings" title="Settings">⚙</button>
   </div>
@@ -555,7 +575,7 @@
 // CONSTANTS
 // ════════════════════════════════════════════════════════════════════════════
 
-const APP_VERSION      = '1.3.0';
+const APP_VERSION      = '1.4.0';
 // Paste your Apps Script web app URL here after deploying Code.gs
 const SHEETS_URL       = 'https://script.google.com/macros/s/AKfycbwj_GlvLiqkfMsm_GNzZu18DS_q4hopFY-b92h0vv1KjINyj_jYe6OvtEHa8QFr9RLWlw/exec';
 const STORAGE_STATE    = 'ggp_current_state';
@@ -563,6 +583,7 @@ const STORAGE_LOG      = 'ggp_assessments';
 const STORAGE_INSP     = 'ggp_inspector';
 const STORAGE_VISIBILITY = 'ggp_visibility';
 const STORAGE_DARKMODE = 'ggp_darkmode';
+const STORAGE_PENDING  = 'ggp_pending_sync';
 const MARKER_SIZE      = 18;   // px diameter for item markers
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -581,6 +602,7 @@ let selectedCond   = 0;      // condition value selected in picker
 // Persisted data
 let currentState  = {};     // deviceNum -> { pos: {condition, notes, assessedAt, assessedBy} }
 let assessmentLog = [];     // array of all saved records (local cache)
+let pendingSync   = [];     // records that failed to reach Sheets, awaiting retry
 
 // ════════════════════════════════════════════════════════════════════════════
 // STORAGE
@@ -599,6 +621,8 @@ function loadFromStorage() {
     }
     const v = localStorage.getItem(STORAGE_VISIBILITY);
     if (v) typeVisibility = JSON.parse(v);
+    const p = localStorage.getItem(STORAGE_PENDING);
+    if (p) pendingSync = JSON.parse(p);
     // Apply dark mode immediately to avoid flash
     if (localStorage.getItem(STORAGE_DARKMODE) === 'true') {
       document.documentElement.setAttribute('data-theme', 'dark');
@@ -613,6 +637,7 @@ function saveToStorage() {
     localStorage.setItem(STORAGE_LOG,        JSON.stringify(assessmentLog));
     localStorage.setItem(STORAGE_INSP,       document.getElementById('inspector-input').value.trim());
     localStorage.setItem(STORAGE_VISIBILITY, JSON.stringify(typeVisibility));
+    localStorage.setItem(STORAGE_PENDING,    JSON.stringify(pendingSync));
   } catch(e) { console.warn('Storage save error:', e); }
 }
 
@@ -620,8 +645,11 @@ function clearAllData() {
   if (!confirm('Clear ALL assessment data? This cannot be undone.')) return;
   currentState  = {};
   assessmentLog = [];
+  pendingSync   = [];
   localStorage.removeItem(STORAGE_STATE);
   localStorage.removeItem(STORAGE_LOG);
+  localStorage.removeItem(STORAGE_PENDING);
+  updatePendingBadge();
   refreshAllMarkers();
   updateStats();
   closePanel();
@@ -954,7 +982,10 @@ function saveAssessment() {
 
   const laEl = document.getElementById('last-assessed');
   laEl.textContent = `Saved ${new Date(now).toLocaleTimeString()} by ${inspector || 'unknown'}`;
-  showToast('Assessment saved!', 'success');
+
+  // Note: the success toast is raised by saveToSheets() only once the server
+  // confirms the write. If Sheets is unconfigured, confirm locally instead.
+  if (!SHEETS_URL) showToast('Assessment saved locally.', 'success');
 }
 
 function updateFixtureTabDot(position) {
@@ -1034,7 +1065,7 @@ function exportCSV() {
   }
 
   const cols = [
-    'assessedAt','assessedBy','poleTagId','deviceNum','poleType','locationId',
+    'idx','assessedAt','assessedBy','poleTagId','deviceNum','poleType','locationId',
     'fixturePosition','fixtureLabel','fixtureZone','fixtureManufacturer','fixtureModel',
     'conditionValue','conditionLabel','notes'
   ];
@@ -1218,6 +1249,7 @@ function findMe() {
 function initEventHandlers() {
   // Header
   document.getElementById('btn-locate').addEventListener('click', findMe);
+  document.getElementById('btn-refresh').addEventListener('click', refreshFromSheets);
   document.getElementById('btn-export').addEventListener('click', exportCSV);
   document.getElementById('btn-settings').addEventListener('click', () => {
     document.getElementById('setting-inspector').value =
@@ -1281,16 +1313,29 @@ function initEventHandlers() {
 // ════════════════════════════════════════════════════════════════════════════
 
 /**
- * Derive currentState from an array of assessment records.
- * For each deviceNum+fixturePosition, keep only the most recent record.
+ * Order two records oldest-first.
+ * Prefers the server-assigned 'idx' column, which is monotonic and comes from
+ * a single authoritative source — so differing device clocks cannot affect
+ * ordering when several teams are assessing at once. Falls back to the
+ * timestamp string only for records from a sheet predating the idx column.
  */
-function deriveStateFromRecords(records) {
-  const state = {};
-  // Sort oldest first so newest wins when we overwrite
-  const sorted = [...records].sort((a, b) =>
-    String(a.assessedAt).localeCompare(String(b.assessedAt))
-  );
-  sorted.forEach(r => {
+function compareRecords(a, b) {
+  const ai = Number(a.idx), bi = Number(b.idx);
+  const aHas = Number.isFinite(ai), bHas = Number.isFinite(bi);
+  if (aHas && bHas) return ai - bi;
+  // A record without an index came from a sheet written before the idx column
+  // existed, so it is older than anything the server has indexed.
+  if (aHas) return 1;
+  if (bHas) return -1;
+  return String(a.assessedAt).localeCompare(String(b.assessedAt));
+}
+
+/**
+ * Apply records into a state object, oldest first, so the newest record for
+ * each deviceNum+fixturePosition wins. Mutates and returns `state`.
+ */
+function applyRecordsToState(state, records) {
+  [...records].sort(compareRecords).forEach(r => {
     const dev = r.deviceNum;
     const pos = parseInt(r.fixturePosition);
     if (!dev || isNaN(pos)) return;
@@ -1305,43 +1350,151 @@ function deriveStateFromRecords(records) {
   return state;
 }
 
-async function loadFromSheets() {
-  if (!SHEETS_URL) return;   // not yet configured — use localStorage only
+/**
+ * Derive currentState from an array of assessment records.
+ * For each deviceNum+fixturePosition, keep only the most recent record.
+ */
+function deriveStateFromRecords(records) {
+  return applyRecordsToState({}, records);
+}
+
+/**
+ * Fetch all records from Sheets and rebuild currentState.
+ * Any records still sitting in the pending queue are re-applied on top, so a
+ * refresh never hides work this device has done but not yet synced.
+ * Returns true on success.
+ */
+async function loadFromSheets(quiet) {
+  if (!SHEETS_URL) return false;   // not configured — localStorage only
 
   try {
     const resp = await fetch(SHEETS_URL + '?action=load');
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
-    if (data.status !== 'ok') throw new Error(data.message);
+    if (data.status !== 'ok') throw new Error(data.message || 'Unknown server error');
 
     assessmentLog = data.records;
-    currentState  = deriveStateFromRecords(data.records);
+    // Server state first, then this device's unsynced work layered on top, so
+    // a refresh never hides an assessment that hasn't reached the server yet.
+    currentState  = applyRecordsToState(
+      deriveStateFromRecords(data.records),
+      pendingSync
+    );
 
-    // Persist to localStorage as cache
     localStorage.setItem(STORAGE_STATE, JSON.stringify(currentState));
     localStorage.setItem(STORAGE_LOG,   JSON.stringify(assessmentLog));
 
-    // Refresh all markers with authoritative state from Sheets
     refreshAllMarkers();
     updateStats();
+    if (currentPole) buildFixtureTabs(currentPole);  // keep open panel in sync
+
     console.log(`Loaded ${data.records.length} records from Google Sheets.`);
+    if (!quiet) showToast(`Updated — ${data.records.length} records.`, 'success');
+    return true;
+
   } catch(err) {
     console.warn('Could not load from Google Sheets — using local cache.', err.message);
-    showToast('Using cached data (Sheets unavailable).', '');
+    showToast(quiet ? 'Using cached data (Sheets unavailable).'
+                    : 'Could not reach Sheets — showing cached data.', 'error');
+    return false;
   }
 }
 
+/**
+ * Send one record to Sheets and confirm it actually landed.
+ * A fetch that resolves is NOT proof of success — the response has to be read
+ * and its status checked, otherwise a server-side failure looks identical to
+ * a successful save.
+ * Returns true only when the server confirms the write.
+ */
+async function postRecord(record) {
+  const url = SHEETS_URL + '?action=save&data=' + encodeURIComponent(JSON.stringify(record));
+
+  // Guard against the URL length ceiling — the payload rides in the query
+  // string, and a long note could otherwise push the request past the limit
+  // and fail in a way that is hard to see.
+  if (url.length > 7500) {
+    throw new Error('Record too large to send (try a shorter note).');
+  }
+
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const data = await resp.json();
+  if (data.status !== 'ok') throw new Error(data.message || 'Server rejected the record');
+  return true;
+}
+
+/**
+ * Save a record, queueing it for retry if the write cannot be confirmed.
+ */
 async function saveToSheets(record) {
   if (!SHEETS_URL) return;
 
   try {
-    // Use GET with encoded payload — avoids CORS preflight that blocks POST
-    const url = SHEETS_URL + '?action=save&data=' + encodeURIComponent(JSON.stringify(record));
-    await fetch(url);
+    await postRecord(record);
+    showToast('Assessment saved.', 'success');
+    // A working connection is a good moment to clear any backlog.
+    if (pendingSync.length) retryPending();
   } catch(err) {
-    console.warn('Could not save to Google Sheets:', err.message);
-    showToast('Saved locally — Sheets sync failed.', 'error');
+    console.warn('Save to Sheets failed:', err.message);
+    pendingSync.push(record);
+    saveToStorage();
+    updatePendingBadge();
+    showToast(`NOT saved to server (${pendingSync.length} pending) — tap ⟳ to retry.`, 'error');
   }
+}
+
+/**
+ * Attempt to flush the pending queue. Stops at the first failure so records
+ * keep their original order.
+ */
+async function retryPending() {
+  if (!SHEETS_URL || !pendingSync.length) return;
+
+  const queue = [...pendingSync];
+  let sent = 0;
+
+  for (const record of queue) {
+    try {
+      await postRecord(record);
+      sent++;
+    } catch(err) {
+      break;   // still offline or still failing — keep the rest queued
+    }
+  }
+
+  if (sent) {
+    pendingSync = pendingSync.slice(sent);
+    saveToStorage();
+    updatePendingBadge();
+    showToast(`Synced ${sent} pending record${sent === 1 ? '' : 's'}.`, 'success');
+  }
+}
+
+/** Show or hide the pending-record count in the header. */
+function updatePendingBadge() {
+  const badge = document.getElementById('pending-badge');
+  if (!badge) return;
+  if (pendingSync.length) {
+    badge.textContent = pendingSync.length;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+/** Header refresh button — retry any backlog, then pull current state. */
+async function refreshFromSheets() {
+  const btn = document.getElementById('btn-refresh');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.classList.add('spinning');
+
+  await retryPending();
+  await loadFromSheets(false);
+
+  btn.classList.remove('spinning');
+  btn.disabled = false;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1371,10 +1524,12 @@ async function init() {
   renderMarkers();
   updateStats();
   document.getElementById('version-display').textContent = APP_VERSION;
+  updatePendingBadge();
 
   // Load authoritative state from Sheets (non-blocking — markers already
-  // show cached localStorage state, then update once Sheets responds)
-  loadFromSheets();
+  // show cached localStorage state, then update once Sheets responds).
+  // Quiet on startup so a normal load doesn't raise a toast.
+  loadFromSheets(true).then(ok => { if (ok) retryPending(); });
 }
 
 document.addEventListener('DOMContentLoaded', init);
