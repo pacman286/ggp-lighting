@@ -591,15 +591,7 @@ MAP_CONFIG = {
     "center": [36.1196, -95.9847],
     "defaultZoom": 16,
     "minZoom": 14,
-    "maxZoom": 20,
-    # Static satellite image overlay — populate after obtaining image from Google Earth Pro
-    # bounds format: [[south_lat, west_lng], [north_lat, east_lng]]
-    "imageOverlay": {
-        "enabled": False,
-        "imagePath": "images/satellite/park_satellite.jpg",
-        "bounds": [[36.110, -95.992], [36.130, -95.978]],
-        "opacity": 1.0
-    }
+    "maxZoom": 20
 }
 
 # ── Excel Processing ─────────────────────────────────────────────────────────

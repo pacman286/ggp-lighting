@@ -3,6 +3,8 @@
 A mobile-friendly web application for recording and tracking light fixture
 condition assessments at Gathering Place, Tulsa OK.
 
+Live at: `https://pacman286.github.io/ggp-lighting`
+
 ---
 
 ## Project Structure
@@ -10,106 +12,151 @@ condition assessments at Gathering Place, Tulsa OK.
 ```
 ggp-lighting/
 │
-├── index.html                  ← Main application (open this in Live Server)
-├── manifest.json               ← PWA manifest (home screen install)
-├── generate_poles_json.py      ← Regenerate poles.json from Excel source
+├── index.html                  ← The entire application
+├── Code.gs                     ← Google Apps Script backend (NOT served by GitHub)
+├── manifest.json               ← Web app manifest
+├── generate_poles_json.py      ← Regenerates poles.json from the Excel sources
+├── .gitignore
 │
-├── data/
-│   └── poles.json              ← Auto-generated pole/fixture config (DO NOT hand-edit)
-│
-└── images/
-    ├── poles/
-    │   └── T4_pole.jpg         ← ← ← ADD POLE PHOTO HERE
-    ├── satellite/
-    │   └── park_satellite.jpg  ← ← ← ADD SATELLITE IMAGE HERE (from Google Earth Pro)
-    └── icons/
-        ├── icon-192.png        ← PWA icon (192×192)
-        └── icon-512.png        ← PWA icon (512×512)
+└── data/
+    └── poles.json              ← Item / fixture definitions and coordinates
 ```
+
+The Excel source files (`Lighting_Type_*.xlsx`, `Additional_Light_Poles.xlsx`)
+live in this folder locally but are excluded from Git by `.gitignore`.
 
 ---
 
-## Quick Start
+## How the Pieces Fit Together
+
+| Piece | Where it runs | What it does |
+|---|---|---|
+| `index.html` | Browser, served by GitHub Pages | Map, assessment UI, all app logic |
+| `data/poles.json` | Fetched by the app | What items exist, where they are, what fixtures they carry |
+| `Code.gs` | Google Apps Script | Reads and appends assessment records |
+| Google Sheet | Google Drive | The assessment record of truth |
+
+Base map imagery is Esri World Imagery, loaded live. No API key required.
+
+---
+
+## Local Development
 
 1. Open the `ggp-lighting` folder in VS Code
 2. Right-click `index.html` → **Open with Live Server**
-3. The app opens in your browser at `http://127.0.0.1:5500`
+3. The app opens at `http://127.0.0.1:5500`
+
+Live Server is required — opening `index.html` directly from the filesystem
+will fail to load `poles.json` due to browser security restrictions.
 
 ---
 
-## Adding the Satellite Image
+## Deploying Changes
 
-1. Export a high-resolution image of the park from **Google Earth Pro**
-   - File → Save → Save Image (set maximum resolution)
-   - Crop to the park boundary
-   - Note the **lat/lng of the top-left and bottom-right corners** of your crop
+**App changes (`index.html`, `poles.json`):**
 
-2. Save the image as `images/satellite/park_satellite.jpg`
+```bash
+git add .
+git commit -m "Description of the change"
+git push
+```
 
-3. Open `data/poles.json`, find `"imageOverlay"` and update:
-   ```json
-   "imageOverlay": {
-     "enabled": true,
-     "imagePath": "images/satellite/park_satellite.jpg",
-     "bounds": [[SOUTH_LAT, WEST_LNG], [NORTH_LAT, EAST_LNG]],
-     "opacity": 1.0
-   }
-   ```
-   Replace the four coordinate values with your actual corner coordinates.
+GitHub Pages rebuilds within about a minute. Hard refresh (`Ctrl+Shift+R`)
+to bypass the browser cache.
 
----
+**Backend changes (`Code.gs`):**
 
-## Adding the Pole Photo (T4)
+Pushing to GitHub does *nothing* for the Apps Script — it runs in the Google
+account, not on GitHub. To deploy:
 
-1. Take or obtain a clear photo of the T4 pole showing all fixtures
-2. Save as `images/poles/T4_pole.jpg`
-3. The app will automatically display it in the detail panel
+1. Open the Google Sheet → **Extensions → Apps Script**
+2. Replace the code, save
+3. **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy**
+
+The web app URL stays the same. When a release changes both, deploy the Apps
+Script first so there's no window where the app is talking to an old backend.
 
 ---
 
-## Adding New Pole Types (T5, T6, etc.)
+## Adding New Item Types
 
-1. Add the new Excel sheet data to the source file (or a new Excel file)
-2. Add a new entry to `POLE_TYPE_DEFINITIONS` in `generate_poles_json.py`
-3. Run: `python generate_poles_json.py`
-4. Add the corresponding image to `images/poles/`
+1. Drop the new `Lighting_Type_XX.xlsx` into the project folder
+2. Add one line to `EXCEL_SOURCES` in `generate_poles_json.py`
+3. Add a matching block to `POLE_TYPE_DEFINITIONS` (fixtures listed top-down,
+   left-to-right)
+4. Run `python generate_poles_json.py`
+5. Commit and push
 
----
+Mixed-type additions (new items spanning types that already exist) go in a
+file listed under `ADDITIONAL_FILES` instead — see `Additional_Light_Poles.xlsx`.
 
-## Updating Pole Data
+Coordinate columns are detected by value range, so swapped or misspelled
+latitude/longitude headers are corrected automatically. `?` in any electrical
+field is stored as null.
 
-When pole records change in your CMMS export:
-
-1. Update the Excel source file
-2. Run: `python generate_poles_json.py`
-3. Refresh the app
-
----
-
-## Deploying to GitHub Pages
-
-1. Create a GitHub repository
-2. Push this folder as the repository root
-3. Go to Settings → Pages → Source: main branch / root
-4. App will be live at `https://yourusername.github.io/ggp-lighting`
+> **Keep the generator authoritative.** Hand-editing `data/poles.json` works,
+> but the next generator run overwrites it. If you edit the JSON directly,
+> mirror the change into `generate_poles_json.py` at the same time.
 
 ---
 
 ## Assessment Data
 
-Assessment records are stored in **browser localStorage** on the device used.
-To export all records: tap **Export CSV** in the app header.
-The CSV can be opened in Excel for reporting and analysis.
+Records are appended to the **Assessment Log** tab of the Google Sheet, one row
+per fixture assessment. The log is append-only — a re-assessment adds a row
+rather than replacing one, so full history is preserved.
+
+The app derives current condition by taking the highest `idx` per
+device + fixture position. `idx` is assigned server-side inside a lock, so it is
+reliable across multiple devices regardless of their clock settings.
+
+**Offline / failed saves.** If a save can't be confirmed, the record is queued
+locally and a red count appears on the refresh button (⟳). Tapping ⟳ retries the
+queue and then pulls current state from the server. The queue survives a reload.
+A record is never reported as saved unless the server confirms it.
+
+**Multiple users.** State is fetched on page load, not polled. Teams do not see
+each other's work until someone refreshes. Assign teams to different item types
+and hide the rest in Settings to avoid overlap. The stats bar reflects only what
+that device has loaded.
+
+**Exporting.** Tap **Export CSV** in the header. To reduce to current condition
+only: sort by `idx` descending, then **Data → Remove Duplicates** on the
+`deviceNum` and `fixturePosition` columns.
+
+---
+
+## Resetting for a New Assessment Round
+
+Delete the entire **Assessment Log** tab in the Google Sheet. The script
+recreates it with correct headers on the first save of the new round.
+
+There is deliberately no in-app reset. A destructive action in a field app
+carried by several people risks wiping a round in progress.
 
 ---
 
 ## Condition Scale
 
-| Value | Label          | Meaning                        |
-|-------|----------------|--------------------------------|
-| 0     | Not Assessed   | No assessment recorded         |
-| 1     | 100% Functional| Fully operational              |
-| 2     | >50% Functional| Majority of LEDs operational   |
-| 3     | <50% Functional| Minority of LEDs operational   |
-| 4     | Flickering     | Unstable / intermittent        |
-| 5     | Non-Functional | Completely inoperative         |
+| Value | Label | Meaning |
+|-------|-------|---------|
+| 0 | Not Assessed | No assessment recorded |
+| 1 | 100% Functional | Fully operational |
+| 2 | >50% Functional | Majority of LEDs operational |
+| 3 | <50% Functional | Minority of LEDs operational |
+| 4 | Flickering | Unstable / intermittent |
+| 5 | Non-Functional | Completely inoperative |
+
+A marker is coloured by the worst condition among its genuinely assessed
+fixtures (condition 0 is ignored). A white centre dot means the item is
+partially assessed — some fixtures still need a reading.
+
+---
+
+## Known Limitations
+
+- The Apps Script endpoint is unauthenticated. Anyone with the URL can read or
+  append records. The URL is visible in `index.html`, which is public.
+- Multi-user state is not live; refresh is manual.
+- Every page load fetches the full log. Fine at current volumes; would need
+  server-side deduplication if the log were allowed to grow across many rounds.

@@ -562,7 +562,7 @@
 // CONSTANTS
 // ════════════════════════════════════════════════════════════════════════════
 
-const APP_VERSION      = '1.4.1';
+const APP_VERSION      = '1.4.2';
 // Paste your Apps Script web app URL here after deploying Code.gs
 const SHEETS_URL       = 'https://script.google.com/macros/s/AKfycbwj_GlvLiqkfMsm_GNzZu18DS_q4hopFY-b92h0vv1KjINyj_jYe6OvtEHa8QFr9RLWlw/exec';
 const STORAGE_STATE    = 'ggp_current_state';
@@ -688,13 +688,6 @@ function initMap() {
       maxZoom: 20
     }
   ).addTo(map);
-
-  // Optional static satellite image overlay
-  // Enable in poles.json mapConfig.imageOverlay when you have the image ready
-  if (cfg.imageOverlay?.enabled) {
-    const io = cfg.imageOverlay;
-    L.imageOverlay(io.imagePath, io.bounds, { opacity: io.opacity ?? 1 }).addTo(map);
-  }
 
   // Close panel on map click (not on marker click)
   map.on('click', () => {
