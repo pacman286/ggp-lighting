@@ -309,14 +309,6 @@
       text-align: center; font-size: 0.72rem; color: #94a3b8; padding-top: 4px;
     }
 
-    .danger-btn {
-      width: 100%; padding: 10px;
-      background: none; border: 2px solid #ef4444;
-      border-radius: 8px; color: #ef4444; font-weight: 600; cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .danger-btn:hover { background: #fef2f2; }
-
     /* ── Dark mode ──────────────────────────────────────────────────────────── */
     [data-theme="dark"] {
       --clr-bg:      #1e293b;
@@ -552,11 +544,6 @@
         <div id="visibility-checkboxes"></div>
       </div>
 
-      <div class="settings-group" style="margin-top:auto">
-        <label style="color:#ef4444">Danger Zone</label>
-        <button class="danger-btn" id="btn-clear-data">Clear All Assessment Data</button>
-      </div>
-
       <div class="settings-version">Version <strong id="version-display"></strong></div>
 
     </div>
@@ -575,7 +562,7 @@
 // CONSTANTS
 // ════════════════════════════════════════════════════════════════════════════
 
-const APP_VERSION      = '1.4.0';
+const APP_VERSION      = '1.4.1';
 // Paste your Apps Script web app URL here after deploying Code.gs
 const SHEETS_URL       = 'https://script.google.com/macros/s/AKfycbwj_GlvLiqkfMsm_GNzZu18DS_q4hopFY-b92h0vv1KjINyj_jYe6OvtEHa8QFr9RLWlw/exec';
 const STORAGE_STATE    = 'ggp_current_state';
@@ -639,21 +626,6 @@ function saveToStorage() {
     localStorage.setItem(STORAGE_VISIBILITY, JSON.stringify(typeVisibility));
     localStorage.setItem(STORAGE_PENDING,    JSON.stringify(pendingSync));
   } catch(e) { console.warn('Storage save error:', e); }
-}
-
-function clearAllData() {
-  if (!confirm('Clear ALL assessment data? This cannot be undone.')) return;
-  currentState  = {};
-  assessmentLog = [];
-  pendingSync   = [];
-  localStorage.removeItem(STORAGE_STATE);
-  localStorage.removeItem(STORAGE_LOG);
-  localStorage.removeItem(STORAGE_PENDING);
-  updatePendingBadge();
-  refreshAllMarkers();
-  updateStats();
-  closePanel();
-  showToast('All assessment data cleared.', 'error');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1284,7 +1256,6 @@ function initEventHandlers() {
     localStorage.setItem(STORAGE_INSP, val);
     document.getElementById('inspector-input').value = val;
   });
-  document.getElementById('btn-clear-data').addEventListener('click', clearAllData);
 
   // Modal close buttons
   document.querySelectorAll('.modal-close-btn').forEach(btn => {
