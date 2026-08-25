@@ -390,7 +390,7 @@
     .find-more  { font-size: 0.7rem;  color: var(--clr-muted); padding: 4px; text-align: center; }
 
     /* Highlight applied to a marker once it has been located */
-    .pole-marker.found { animation: found-pulse 1s ease-out 4; z-index: 1000 !important; }
+    .pole-marker.found { animation: found-pulse 1.1s ease-out infinite; z-index: 1000 !important; }
     @keyframes found-pulse {
       0%   { box-shadow: 0 0 0 0    rgba(250,204,21,0.95), 0 2px 6px rgba(0,0,0,0.4); }
       70%  { box-shadow: 0 0 0 16px rgba(250,204,21,0),    0 2px 6px rgba(0,0,0,0.4); }
@@ -637,7 +637,7 @@
 // CONSTANTS
 // ════════════════════════════════════════════════════════════════════════════
 
-const APP_VERSION      = '1.5.0';
+const APP_VERSION      = '1.5.1';
 // Paste your Apps Script web app URL here after deploying Code.gs
 const SHEETS_URL       = 'https://script.google.com/macros/s/AKfycbwj_GlvLiqkfMsm_GNzZu18DS_q4hopFY-b92h0vv1KjINyj_jYe6OvtEHa8QFr9RLWlw/exec';
 const STORAGE_STATE    = 'ggp_current_state';
@@ -766,6 +766,7 @@ function initMap() {
 
   // Close panel on map click (not on marker click)
   map.on('click', () => {
+    clearFoundHighlight();
     if (currentPole) closePanel();
   });
 }
@@ -812,6 +813,7 @@ function renderMarkers() {
 
     marker.on('click', (e) => {
       L.DomEvent.stopPropagation(e);
+      clearFoundHighlight();
       openPanel(pole);
     });
 
@@ -1287,6 +1289,7 @@ function findMe() {
 // ════════════════════════════════════════════════════════════════════════════
 
 const MAX_RESULTS = 12;
+let foundTimer = null;   // clears the find highlight
 
 /** Strip punctuation and spacing so "t4 33", "T4.33" and "T433" all match. */
 function looseKey(s) {
@@ -1374,9 +1377,17 @@ function renderFindResults() {
   }
 }
 
-/** Center the map on an item, flash its marker, and open its detail panel. */
+/** Remove the find highlight from whichever marker currently carries it. */
+function clearFoundHighlight() {
+  if (foundTimer) { clearTimeout(foundTimer); foundTimer = null; }
+  document.querySelectorAll('.pole-marker.found')
+          .forEach(el => el.classList.remove('found'));
+}
+
+/** Center the map on an item and flash its marker. */
 function goToItem(pole) {
   closeModal('find-modal');
+  clearFoundHighlight();
 
   // A hidden type has no marker on the map, so the search would appear to fail.
   if (typeVisibility[pole.type] === false) {
@@ -1390,6 +1401,12 @@ function goToItem(pole) {
     return;
   }
 
+  // On a phone the detail panel is a bottom sheet covering most of the screen,
+  // which would hide the marker we are flying to. Where the panel sits beside
+  // the map instead, it can stay open.
+  const wideScreen = window.innerWidth >= 600;
+  if (!wideScreen) closePanel();
+
   map.flyTo([pole.lat, pole.lng], Math.max(map.getZoom(), 19), { duration: 0.8 });
 
   // Wait for the layer to be on the map before touching its element
@@ -1398,9 +1415,12 @@ function goToItem(pole) {
     const el = marker && marker.getElement()?.querySelector('.pole-marker');
     if (el) {
       el.classList.add('found');
-      setTimeout(() => el.classList.remove('found'), 4200);
+      // Keep it flashing while the technician walks to it; the long stop is a
+      // safety net in case they never tap the map or the marker.
+      foundTimer = setTimeout(clearFoundHighlight, 120000);
     }
-    openPanel(pole);
+    if (wideScreen) openPanel(pole);
+    else showToast(`${pole.deviceNum} — ${pole.locationId ?? ''}`, 'success');
   }, 300);
 }
 
