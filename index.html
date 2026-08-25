@@ -340,6 +340,63 @@
     [data-theme="dark"] #legend h4          { color: #94a3b8; }
     [data-theme="dark"] .panel-location,
     [data-theme="dark"] .panel-tag          { color: #94a3b8; }
+
+    /* ── Find (search) ──────────────────────────────────────────────────────── */
+    /* Anchored to the top so the on-screen keyboard doesn't cover the results */
+    #find-modal { align-items: flex-start; }
+    #find-modal .modal-sheet {
+      border-radius: 0 0 var(--panel-radius) var(--panel-radius);
+      max-height: 88vh; width: 100%; max-width: 560px;
+      transform: translateY(-24px);
+    }
+    #find-modal.open .modal-sheet { transform: translateY(0); }
+
+    #find-input {
+      width: 100%; padding: 11px 12px;
+      border: 2px solid var(--clr-border); border-radius: 10px;
+      font-size: 1rem; font-family: inherit;
+      background: var(--clr-bg); color: var(--clr-text);
+      -webkit-appearance: none;
+    }
+    #find-input:focus { outline: none; border-color: var(--clr-primary); }
+    [data-theme="dark"] #find-input { background:#1e293b; border-color:#334155; color:#e2e8f0; }
+
+    #find-hint { font-size: 0.72rem; color: var(--clr-muted); margin-top: 6px; }
+    #find-results { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+
+    .find-row {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 10px; border-radius: 9px; cursor: pointer;
+      border: 1px solid var(--clr-border); background: var(--clr-bg);
+      text-align: left; width: 100%; font-family: inherit;
+    }
+    .find-row:hover, .find-row:focus {
+      background: #f0fdf4; border-color: var(--clr-primary); outline: none;
+    }
+    [data-theme="dark"] .find-row { background:#1e293b; border-color:#334155; }
+    [data-theme="dark"] .find-row:hover,
+    [data-theme="dark"] .find-row:focus { background:#263548; }
+    .find-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0;
+                border: 1px solid rgba(0,0,0,0.15); }
+    .find-main { flex: 1; min-width: 0; }
+    .find-dev  { font-weight: 700; font-size: 0.86rem; color: var(--clr-text); }
+    .find-meta { font-size: 0.7rem; color: var(--clr-muted); }
+    .find-type {
+      font-size: 0.66rem; font-weight: 700; color: var(--clr-primary);
+      background: var(--clr-border); border-radius: 9px; padding: 2px 7px; flex-shrink: 0;
+    }
+    [data-theme="dark"] .find-type { color: var(--clr-accent); background:#334155; }
+    .find-empty { font-size: 0.82rem; color: var(--clr-muted); padding: 14px 4px; text-align: center; }
+    .find-more  { font-size: 0.7rem;  color: var(--clr-muted); padding: 4px; text-align: center; }
+
+    /* Highlight applied to a marker once it has been located */
+    .pole-marker.found { animation: found-pulse 1s ease-out 4; z-index: 1000 !important; }
+    @keyframes found-pulse {
+      0%   { box-shadow: 0 0 0 0    rgba(250,204,21,0.95), 0 2px 6px rgba(0,0,0,0.4); }
+      70%  { box-shadow: 0 0 0 16px rgba(250,204,21,0),    0 2px 6px rgba(0,0,0,0.4); }
+      100% { box-shadow: 0 0 0 0    rgba(250,204,21,0),    0 2px 6px rgba(0,0,0,0.4); }
+    }
+
     .location-dot {
       width: 24px; height: 24px; border-radius: 50%;
       background: #06b6d4;
@@ -421,6 +478,7 @@
 <header id="app-header">
   <h1>GGP <span>Lighting</span> Assessment</h1>
   <div class="header-btns">
+    <button class="header-btn icon" id="btn-find" title="Find an item by device number or tag">&#128269;</button>
     <button class="header-btn icon" id="btn-locate" title="Find my location">⊕</button>
     <button class="header-btn icon" id="btn-refresh" title="Refresh from server">
       ⟳<span id="pending-badge"></span>
@@ -516,6 +574,23 @@
   </div>
 </div>
 
+<!-- ── Find Modal ────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="find-modal">
+  <div class="modal-sheet">
+    <div class="modal-top">
+      <h2>Find an Item</h2>
+      <button class="modal-close-btn" data-modal="find-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="search" id="find-input" placeholder="Device number or tag ID…"
+             autocomplete="off" autocorrect="off" autocapitalize="characters"
+             spellcheck="false" enterkeyhint="search" />
+      <div id="find-hint">Enter a device number (T4.33) or a tag ID (PKNG.LPO.0032).</div>
+      <div id="find-results"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Settings Modal ────────────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal-sheet">
@@ -562,7 +637,7 @@
 // CONSTANTS
 // ════════════════════════════════════════════════════════════════════════════
 
-const APP_VERSION      = '1.4.2';
+const APP_VERSION      = '1.5.0';
 // Paste your Apps Script web app URL here after deploying Code.gs
 const SHEETS_URL       = 'https://script.google.com/macros/s/AKfycbwj_GlvLiqkfMsm_GNzZu18DS_q4hopFY-b92h0vv1KjINyj_jYe6OvtEHa8QFr9RLWlw/exec';
 const STORAGE_STATE    = 'ggp_current_state';
@@ -1208,11 +1283,142 @@ function findMe() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// FIND AN ITEM
+// ════════════════════════════════════════════════════════════════════════════
+
+const MAX_RESULTS = 12;
+
+/** Strip punctuation and spacing so "t4 33", "T4.33" and "T433" all match. */
+function looseKey(s) {
+  return String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/**
+ * Two comparable forms for a device number or tag.
+ * Device numbers are zero-padded on record (T4.01, not T4.1), but a work order
+ * or a technician typing quickly may drop the zero. The second key strips
+ * leading zeros from every numeric run so both forms match the same item.
+ */
+function keysFor(s) {
+  const raw = looseKey(s);
+  const unpadded = looseKey(String(s ?? '').replace(/\d+/g, d => String(parseInt(d, 10))));
+  return raw === unpadded ? [raw] : [raw, unpadded];
+}
+
+/**
+ * Rank items against a query. Exact matches first, then prefix, then substring.
+ * Device numbers are unique; a tag ID may cover several items (up to 15), so
+ * this always returns a list rather than a single hit.
+ */
+function findItems(query) {
+  const qKeys = keysFor(query).filter(Boolean);
+  if (!qKeys.length || !polesData) return [];
+
+  const scored = [];
+  polesData.poles.forEach(pole => {
+    const cand = [...keysFor(pole.deviceNum), ...keysFor(pole.tagId)];
+    let best = null;
+    cand.forEach(c => {
+      qKeys.forEach(q => {
+        let s = null;
+        if (c === q)                 s = 0;   // exact
+        else if (c.startsWith(q))    s = 1;   // prefix
+        else if (c.includes(q))      s = 2;   // substring
+        if (s !== null && (best === null || s < best)) best = s;
+      });
+    });
+    if (best !== null) scored.push({ pole, score: best });
+  });
+
+  scored.sort((a, b) =>
+    a.score - b.score ||
+    String(a.pole.deviceNum).localeCompare(String(b.pole.deviceNum), undefined, { numeric: true })
+  );
+  return scored.map(s => s.pole);
+}
+
+function renderFindResults() {
+  const q   = document.getElementById('find-input').value;
+  const box = document.getElementById('find-results');
+  box.innerHTML = '';
+
+  if (!q.trim()) return;
+
+  const hits = findItems(q);
+  if (!hits.length) {
+    box.innerHTML = '<div class="find-empty">No item matches that device number or tag.</div>';
+    return;
+  }
+
+  hits.slice(0, MAX_RESULTS).forEach(pole => {
+    const color = condColor(worstCondition(pole.deviceNum));
+    const hidden = typeVisibility[pole.type] === false;
+    const btn = document.createElement('button');
+    btn.className = 'find-row';
+    btn.innerHTML = `
+      <div class="find-dot" style="background:${color}"></div>
+      <div class="find-main">
+        <div class="find-dev">${pole.deviceNum}</div>
+        <div class="find-meta">${pole.tagId ?? ''} &nbsp;·&nbsp; ${pole.locationId ?? ''}${hidden ? ' · currently hidden' : ''}</div>
+      </div>
+      <span class="find-type">${pole.type}</span>`;
+    btn.addEventListener('click', () => goToItem(pole));
+    box.appendChild(btn);
+  });
+
+  if (hits.length > MAX_RESULTS) {
+    const more = document.createElement('div');
+    more.className = 'find-more';
+    more.textContent = `${hits.length - MAX_RESULTS} more — keep typing to narrow`;
+    box.appendChild(more);
+  }
+}
+
+/** Center the map on an item, flash its marker, and open its detail panel. */
+function goToItem(pole) {
+  closeModal('find-modal');
+
+  // A hidden type has no marker on the map, so the search would appear to fail.
+  if (typeVisibility[pole.type] === false) {
+    setTypeVisibility(pole.type, true);
+    buildVisibilityCheckboxes();
+    showToast(`${pole.type} items shown again.`, '');
+  }
+
+  if (pole.lat == null || pole.lng == null) {
+    showToast(`${pole.deviceNum} has no coordinates on record.`, 'error');
+    return;
+  }
+
+  map.flyTo([pole.lat, pole.lng], Math.max(map.getZoom(), 19), { duration: 0.8 });
+
+  // Wait for the layer to be on the map before touching its element
+  setTimeout(() => {
+    const marker = leafletMarkers[pole.deviceNum];
+    const el = marker && marker.getElement()?.querySelector('.pole-marker');
+    if (el) {
+      el.classList.add('found');
+      setTimeout(() => el.classList.remove('found'), 4200);
+    }
+    openPanel(pole);
+  }, 300);
+}
+
+function openFind() {
+  document.getElementById('find-results').innerHTML = '';
+  const input = document.getElementById('find-input');
+  input.value = '';
+  openModal('find-modal');
+  setTimeout(() => input.focus(), 120);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // EVENT WIRING
 // ════════════════════════════════════════════════════════════════════════════
 
 function initEventHandlers() {
   // Header
+  document.getElementById('btn-find').addEventListener('click', openFind);
   document.getElementById('btn-locate').addEventListener('click', findMe);
   document.getElementById('btn-refresh').addEventListener('click', refreshFromSheets);
   document.getElementById('btn-export').addEventListener('click', exportCSV);
@@ -1234,6 +1440,17 @@ function initEventHandlers() {
   document.getElementById('inspector-input').addEventListener('change', e => {
     localStorage.setItem(STORAGE_INSP, e.target.value.trim());
     document.getElementById('setting-inspector').value = e.target.value;
+  });
+
+  // Find — live results, Enter jumps straight to a single match
+  const findInput = document.getElementById('find-input');
+  findInput.addEventListener('input', renderFindResults);
+  findInput.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const hits = findItems(findInput.value);
+    if (hits.length === 1) goToItem(hits[0]);
+    else document.querySelector('#find-results .find-row')?.focus();
   });
 
   // Dark mode toggle
